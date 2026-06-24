@@ -106,18 +106,10 @@ function drawFrame(
 		if (p.phase !== "arc") continue;
 		const [x, y] = angToXY(p.angle);
 		const a = Math.max(0, Math.min(1, p.alpha));
-		const haloR = 14;
-		const grad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
-		grad.addColorStop(0, hexToRgba(p.color, a * 0.45));
-		grad.addColorStop(1, hexToRgba(p.color, 0));
-		ctx.fillStyle = grad;
-		ctx.beginPath();
-		ctx.arc(x, y, haloR, 0, Math.PI * 2);
-		ctx.fill();
 		ctx.globalAlpha = a;
-		ctx.fillStyle = p.color;
 		ctx.beginPath();
-		ctx.arc(x, y, 5, 0, Math.PI * 2);
+		ctx.arc(x, y, 4, 0, Math.PI * 2);
+		ctx.fillStyle = p.color === "#f87171" ? "rgba(239, 68, 68, 0.55)" : p.color;
 		ctx.fill();
 		ctx.globalAlpha = 1;
 	}
@@ -275,7 +267,12 @@ export default function ExamClockViz({ records }: { records: ParsedExamRecord[] 
 				}
 			}
 
-			sim.particles = sim.particles.filter(p => !tickParticle(p, dt));
+			const nextParticles: (typeof sim.particles[number])[] = [];
+			for (const p of sim.particles) {
+				const done = tickParticle(p, dt);
+				if (!done) nextParticles.push(p);
+			}
+			sim.particles = nextParticles;
 			drawFrame(ctx, simRef.current, nodes, mouseRef.current, dpr);
 			raf = requestAnimationFrame(loop);
 		};
