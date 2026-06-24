@@ -1,14 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-type Beverage = {
-	id: number;
-	name: string;
-	abv: string;
-	price: string;
-	volumeL: string;
-};
+import type { Beverage } from "../types";
+import { ALCOHOL_CHEAPSKATE_DEFAULT_BEVERAGES } from "../sampleData";
 
 type BeverageResult = {
 	id: number;
@@ -18,18 +12,13 @@ type BeverageResult = {
 	costPerLDrink: number;
 };
 
-const DEFAULT_BEVERAGES: Beverage[] = [
-	{ id: 1, name: "Beer", abv: "4.6", price: "3.5", volumeL: "0.33" },
-	{ id: 2, name: "Vodka", abv: "37.5", price: "95", volumeL: "0.70" },
-];
-
 const readNumber = (value: string) => {
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : 0;
 };
 
 export default function AlcoholCheapskateProject() {
-	const [beverages, setBeverages] = useState<Beverage[]>(DEFAULT_BEVERAGES);
+	const [beverages, setBeverages] = useState<Beverage[]>(ALCOHOL_CHEAPSKATE_DEFAULT_BEVERAGES);
 
 	const results = useMemo<BeverageResult[]>(() => {
 		return beverages.map((item) => {
