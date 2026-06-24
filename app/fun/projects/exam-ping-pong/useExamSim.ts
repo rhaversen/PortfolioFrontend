@@ -145,12 +145,12 @@ export function useExamSim(records: ParsedExamRecord[]) {
 	const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
 
 	const simStart = useMemo(() => {
-		if (nodes.length === 0) return Date.now();
+		if (nodes.length === 0) return 0;
 		return nodes[0].dateMs - YEAR_MS / 2;
 	}, [nodes]);
 
 	const simEnd = useMemo(() => {
-		if (nodes.length === 0) return Date.now();
+		if (nodes.length === 0) return 0;
 		return nodes[nodes.length - 1].dateMs + YEAR_MS / 12;
 	}, [nodes]);
 

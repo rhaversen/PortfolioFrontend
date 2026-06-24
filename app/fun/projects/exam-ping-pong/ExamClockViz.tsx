@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { ParsedExamRecord } from "./parser";
 import {
 	type ExamNode, type SimState,
-	SIM_SPEED, YEAR_MS, ARC_SPEED_BASE, GLOW_DUR,
+	SIM_SPEED, YEAR_MS,
 	circleAngle, cwDist, hexToRgba, msToAngle, tickParticle, useExamSim,
 } from "./useExamSim";
 import ExamTimelineViz from "./ExamTimelineViz";
