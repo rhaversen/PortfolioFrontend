@@ -81,21 +81,20 @@ function drawTimeline(
 		ctx.fill();
 	}
 
-	// Arc particles — interpolate linearly between startMs and targetMs.
-	// Untargeted (failed with no known retry) travel toward simEnd while fading.
+	// Arc particles — position derived from p.angle (time-based ease-out in tickParticle)
+	// Both targeted and untargeted use the same angle-based progress
 	for (const p of sim.particles) {
 		if (p.phase !== "arc") continue;
 		const a = Math.max(0, Math.min(1, p.alpha));
+		const progress = p.travelDist > 0
+			? Math.min((p.angle - p.startAngle) / p.travelDist, 1)
+			: 0;
 		let x: number;
 		if (p.targetId === null) {
-			const progress = 1 - a; // alpha 1→0 drives rightward drift
 			const startX = msToX(p.startMs);
 			const endX = msToX(simEnd);
 			x = Math.max(ML, Math.min(canvasW - MR, startX + (endX - startX) * progress));
 		} else {
-			const progress = p.travelDist > 0
-				? Math.min((p.angle - p.startAngle) / p.travelDist, 1)
-				: 0;
 			const ms = p.startMs + (p.targetMs - p.startMs) * progress;
 			x = Math.max(ML, Math.min(canvasW - MR, msToX(ms)));
 		}

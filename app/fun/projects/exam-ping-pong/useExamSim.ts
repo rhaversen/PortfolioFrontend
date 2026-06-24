@@ -6,7 +6,7 @@ import type { ParsedExamRecord } from "./parser";
 export const YEAR_MS = 365.25 * 24 * 3600 * 1000;
 export const SUMMER_DAY = 172; // ≈ June 21
 export const SIM_SPEED = 0.1; // years per real-second (fixed)
-export const ARC_SPEED_BASE = (Math.PI * 2) / 900;
+export const ARC_DURATION = 900; // ms — fixed travel time for all arc particles
 export const GLOW_DUR = 900;
 
 export interface ExamNode {
@@ -113,21 +113,14 @@ export function tickParticle(p: Particle, dt: number): boolean {
 	p.t += dt;
 
 	if (p.phase === "arc") {
-		const traveled = p.angle - p.startAngle;
-		let speed = ARC_SPEED_BASE;
-		if (p.targetAngle !== null) {
-			const progress = Math.min(traveled / p.travelDist, 1);
-			speed = ARC_SPEED_BASE * Math.max(1 - 0.75 * progress, 0.25);
+		const raw = Math.min(p.t / ARC_DURATION, 1);
+		// Cubic ease-out: starts fast, decelerates to destination
+		const eased = 1 - Math.pow(1 - raw, 3);
+		p.angle = p.startAngle + p.travelDist * eased;
+		if (p.targetAngle === null) {
+			p.alpha = Math.max(0, 1 - raw);
 		}
-		p.angle += speed * dt;
-		const traveledNow = p.angle - p.startAngle;
-		if (p.targetAngle !== null) {
-			if (traveledNow >= p.travelDist - 0.02) return true;
-		} else {
-			p.alpha = Math.max(0, 1 - traveledNow / (Math.PI * 2));
-			if (traveledNow >= Math.PI * 2) return true;
-		}
-		return false;
+		return raw >= 1;
 	}
 
 	if (p.phase === "glow") {
