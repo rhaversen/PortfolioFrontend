@@ -5,6 +5,7 @@ import { parseExamResults } from "./parser";
 import { useExamSim } from "./useExamSim";
 import ExamClockViz from "./ExamClockViz";
 import ExamTimelineViz from "./ExamTimelineViz";
+import ExamUpcomingList from "./ExamUpcomingList";
 
 const SAMPLE_INPUT = `Machine Learning\t29.05.2026\t02\tE\t10.0
 Machine Learning\t29.01.2026\t-3\tF\t10.0
@@ -44,7 +45,8 @@ export default function ExamPingPongProject() {
 		<div className="space-y-5">
 			{nodes.length > 0 && (
 				<div className="space-y-3">
-					<div className="flex justify-center overflow-x-auto">
+					<div className="flex gap-6 justify-center items-start overflow-x-auto">
+						<ExamUpcomingList nodes={nodes} simRef={simRef} />
 						<ExamClockViz nodes={nodes} byId={byId} simRef={simRef} simEnd={simEnd} reset={reset} />
 					</div>
 					<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
@@ -58,7 +60,7 @@ export default function ExamPingPongProject() {
 					</div>
 					<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
 						<span className="flex items-center gap-1.5">
-							<span className="inline-block w-2 h-2 rounded-full bg-white/45 shrink-0" />
+						<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "rgba(0,0,0,0.40)" }} />
 							upcoming
 						</span>
 						<span className="flex items-center gap-1.5">
