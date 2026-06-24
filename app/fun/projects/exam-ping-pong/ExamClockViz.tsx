@@ -1,26 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ParsedExamRecord } from "./parser";
 import {
 	type ExamNode, type SimState,
 	SIM_SPEED, YEAR_MS,
-	circleAngle, cwDist, hexToRgba, msToAngle, tickParticle, useExamSim,
+	circleAngle, cwDist, msToAngle, tickParticle,
 } from "./useExamSim";
-import ExamTimelineViz from "./ExamTimelineViz";
-
-const CX = 240;
-const CY = 255;
-const R = 172;
-const W = 480;
-const H = 510;
-
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const MONTH_DAY_1 = [1,32,60,91,121,152,182,213,244,274,305,335];
-
-function angToXY(a: number, r = R, cx = CX, cy = CY): [number, number] {
-	return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
-}
+import { CX, CY, R, W, H, MONTHS, MONTH_DAY_1, angToXY } from "./vizConfig";
+import { drawGlowAt } from "./drawUtils";
 
 function drawFrame(
 	ctx: CanvasRenderingContext2D,
@@ -114,24 +101,10 @@ function drawFrame(
 		ctx.globalAlpha = 1;
 	}
 
-	// Glow particles — expand and fade at fixed position (passed exam)
+	// Glow particles — expand and fade at fixed position
 	for (const p of sim.particles) {
 		if (p.phase !== "glow") continue;
-		const a = Math.max(0, Math.min(1, p.alpha));
-		const haloR = p.gr * 2.5;
-		const grad = ctx.createRadialGradient(p.gx, p.gy, 0, p.gx, p.gy, haloR);
-		grad.addColorStop(0, hexToRgba(p.color, a * 0.5));
-		grad.addColorStop(1, hexToRgba(p.color, 0));
-		ctx.fillStyle = grad;
-		ctx.beginPath();
-		ctx.arc(p.gx, p.gy, haloR, 0, Math.PI * 2);
-		ctx.fill();
-		ctx.globalAlpha = a;
-		ctx.fillStyle = p.color;
-		ctx.beginPath();
-		ctx.arc(p.gx, p.gy, p.gr, 0, Math.PI * 2);
-		ctx.fill();
-		ctx.globalAlpha = 1;
+		drawGlowAt(ctx, p.gx, p.gy, p.color, p.alpha, p.gr);
 	}
 
 	// Clock hand — simple line from center to circle edge
@@ -187,10 +160,17 @@ function drawFrame(
 	ctx.restore();
 }
 
-export default function ExamClockViz({ records }: { records: ParsedExamRecord[] }) {
+interface Props {
+	nodes: ExamNode[];
+	byId: Map<string, ExamNode>;
+	simRef: { current: SimState };
+	simEnd: number;
+	reset: () => void;
+}
+
+export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Props) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const mouseRef = useRef<{ x: number; y: number } | null>(null);
-	const { nodes, byId, simRef, simStart, simEnd, reset } = useExamSim(records);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -286,36 +266,5 @@ export default function ExamClockViz({ records }: { records: ParsedExamRecord[] 
 		};
 	}, [nodes, byId, simRef, simEnd, reset]);
 
-	if (records.length === 0) return null;
-
-	return (
-		<div className="space-y-3">
-			<div className="flex justify-center overflow-x-auto">
-				<canvas ref={canvasRef} style={{ display: "block" }} />
-			</div>
-			<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
-			<div className="flex justify-center">
-				<button
-					onClick={reset}
-					className="border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors"
-				>
-					↺  Reset
-				</button>
-			</div>
-			<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
-				<span className="flex items-center gap-1.5">
-					<span className="inline-block w-2 h-2 rounded-full bg-white/45 shrink-0" />
-					upcoming
-				</span>
-				<span className="flex items-center gap-1.5">
-					<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#4ade80" }} />
-					passed
-				</span>
-				<span className="flex items-center gap-1.5">
-					<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#f87171" }} />
-					failed → retry
-				</span>
-			</div>
-		</div>
-	);
+	return <canvas ref={canvasRef} style={{ display: "block" }} />;
 }

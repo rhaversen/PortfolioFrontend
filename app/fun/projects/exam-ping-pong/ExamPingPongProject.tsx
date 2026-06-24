@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { parseExamResults } from "./parser";
+import { useExamSim } from "./useExamSim";
 import ExamClockViz from "./ExamClockViz";
+import ExamTimelineViz from "./ExamTimelineViz";
 
 const SAMPLE_INPUT = `Machine Learning\t29.05.2026\t02\tE\t10.0
 Machine Learning\t29.01.2026\t-3\tF\t10.0
@@ -36,6 +38,7 @@ Introduktion til programmering\t21.12.2022\t12\tA\t10.0`;
 export default function ExamPingPongProject() {
 	const [rawInput, setRawInput] = useState(SAMPLE_INPUT);
 	const parsed = useMemo(() => parseExamResults(rawInput), [rawInput]);
+	const { nodes, byId, simRef, simStart, simEnd, reset } = useExamSim(parsed.records);
 
 	return (
 		<div className="space-y-5">
@@ -43,7 +46,36 @@ export default function ExamPingPongProject() {
 				Paste directly from STADS. A year-clock animates your exam history — summer at the top, winter at the bottom. The hand sweeps through time: passed exams glow green and fade, failed ones blink red and ping to the next attempt. Hover any dot to see the course name.
 			</p>
 
-			<ExamClockViz records={parsed.records} />
+			{nodes.length > 0 && (
+				<div className="space-y-3">
+					<div className="flex justify-center overflow-x-auto">
+						<ExamClockViz nodes={nodes} byId={byId} simRef={simRef} simEnd={simEnd} reset={reset} />
+					</div>
+					<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
+					<div className="flex justify-center">
+						<button
+							onClick={reset}
+							className="border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors"
+						>
+							↺  Reset
+						</button>
+					</div>
+					<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
+						<span className="flex items-center gap-1.5">
+							<span className="inline-block w-2 h-2 rounded-full bg-white/45 shrink-0" />
+							upcoming
+						</span>
+						<span className="flex items-center gap-1.5">
+							<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#4ade80" }} />
+							passed
+						</span>
+						<span className="flex items-center gap-1.5">
+							<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#f87171" }} />
+							failed → retry
+						</span>
+					</div>
+				</div>
+			)}
 
 			<div className="space-y-3">
 				<div className="flex items-center justify-between gap-3">

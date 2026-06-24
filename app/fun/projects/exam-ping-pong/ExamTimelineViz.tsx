@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { type ExamNode, type SimState, hexToRgba } from "./useExamSim";
-
-const TL_H = 88;
+import { type ExamNode, type SimState } from "./useExamSim";
+import { TL_H } from "./vizConfig";
+import { drawGlowAt } from "./drawUtils";
 
 function drawTimeline(
 	ctx: CanvasRenderingContext2D,
@@ -81,8 +81,7 @@ function drawTimeline(
 		ctx.fill();
 	}
 
-	// Arc particles — position derived from p.angle (time-based ease-out in tickParticle)
-	// Both targeted and untargeted use the same angle-based progress
+	// Arc particles
 	for (const p of sim.particles) {
 		if (p.phase !== "arc") continue;
 		const a = Math.max(0, Math.min(1, p.alpha));
@@ -98,42 +97,19 @@ function drawTimeline(
 			const ms = p.startMs + (p.targetMs - p.startMs) * progress;
 			x = Math.max(ML, Math.min(canvasW - MR, msToX(ms)));
 		}
-
-		const haloR = 14;
-		const grad = ctx.createRadialGradient(x, lineY, 0, x, lineY, haloR);
-		grad.addColorStop(0, hexToRgba(p.color, a * 0.45));
-		grad.addColorStop(1, hexToRgba(p.color, 0));
-		ctx.fillStyle = grad;
-		ctx.beginPath();
-		ctx.arc(x, lineY, haloR, 0, Math.PI * 2);
-		ctx.fill();
 		ctx.globalAlpha = a;
-		ctx.fillStyle = p.color;
 		ctx.beginPath();
-		ctx.arc(x, lineY, 5, 0, Math.PI * 2);
+		ctx.arc(x, lineY, 4, 0, Math.PI * 2);
+		ctx.fillStyle = p.color === "#f87171" ? "rgba(239,68,68,0.55)" : p.color;
 		ctx.fill();
 		ctx.globalAlpha = 1;
 	}
 
-	// Glow particles — fixed at the exam's timeline position
+	// Glow particles — expand and fade at the exam's timeline position
 	for (const p of sim.particles) {
 		if (p.phase !== "glow") continue;
 		const x = Math.max(ML, Math.min(canvasW - MR, msToX(p.startMs)));
-		const a = Math.max(0, Math.min(1, p.alpha));
-		const haloR = p.gr * 2.5;
-		const grad = ctx.createRadialGradient(x, lineY, 0, x, lineY, haloR);
-		grad.addColorStop(0, hexToRgba(p.color, a * 0.5));
-		grad.addColorStop(1, hexToRgba(p.color, 0));
-		ctx.fillStyle = grad;
-		ctx.beginPath();
-		ctx.arc(x, lineY, haloR, 0, Math.PI * 2);
-		ctx.fill();
-		ctx.globalAlpha = a;
-		ctx.fillStyle = p.color;
-		ctx.beginPath();
-		ctx.arc(x, lineY, p.gr, 0, Math.PI * 2);
-		ctx.fill();
-		ctx.globalAlpha = 1;
+		drawGlowAt(ctx, x, lineY, p.color, p.alpha, p.gr);
 	}
 
 	// "Now" needle
