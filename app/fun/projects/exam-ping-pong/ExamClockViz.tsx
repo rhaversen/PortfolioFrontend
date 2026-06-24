@@ -60,7 +60,7 @@ function drawFrame(
 
 	// Exam dots — fade in over the 6 months before the exam date.
 	// Retry exams (prevFailedId set) are invisible until their predecessor fires;
-	// the arc particle travelling to them IS their representation until it lands.
+	// the arc particle traveling to them IS their representation until it lands.
 	const FADE_WINDOW = YEAR_MS / 2;
 	let hoveredNode: ExamNode | null = null;
 	for (const node of nodes) {
