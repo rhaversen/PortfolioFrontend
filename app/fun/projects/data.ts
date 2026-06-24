@@ -13,7 +13,7 @@ export const SIDE_PROJECTS: SideProject[] = [
 	{
 		id: "exam-ping-pong",
 		title: "Exam Ping-Pong",
-		summary: "Year-circle exam timeline where passed exams stick and failed exams bounce to the next attempt.",
+		summary: "An exam is a position in a cycle. Failed attempts get rescheduled. The system just keeps sweeping forward, and every subject eventually resolves.",
 		stack: ["Timeline", "Data Viz", "Education"],
 		Component: ExamPingPongProject,
 	}

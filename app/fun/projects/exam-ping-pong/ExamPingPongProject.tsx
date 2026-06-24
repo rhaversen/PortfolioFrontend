@@ -42,10 +42,6 @@ export default function ExamPingPongProject() {
 
 	return (
 		<div className="space-y-5">
-			<p className="text-sm leading-relaxed text-foreground/90 max-w-3xl">
-				Paste directly from STADS. A year-clock animates your exam history — summer at the top, winter at the bottom. The hand sweeps through time: passed exams glow green and fade, failed ones blink red and ping to the next attempt. Hover any dot to see the course name.
-			</p>
-
 			{nodes.length > 0 && (
 				<div className="space-y-3">
 					<div className="flex justify-center overflow-x-auto">
