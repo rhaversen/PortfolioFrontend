@@ -59,8 +59,8 @@ export default function FunPage() {
 
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
-			<section className="w-full border-y border-border bg-card/80">
-			<div className="max-w-4xl mx-auto px-6 py-5 sm:py-10">
+			<section className="w-full bg-card/80">
+			<div className="max-w-4xl mx-auto px-6 py-5 sm:py-8">
 					<Link
 						href="/"
 						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90 decoration-transparent transition-colors duration-150 hover:decoration-current"
@@ -68,16 +68,17 @@ export default function FunPage() {
 						← Back To Portfolio
 					</Link>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight mt-4">Side Projects Fun</h1>
-					<div className="mt-5 h-px w-56 bg-border" />
 					<p className="text-foreground/90 mt-5 max-w-3xl text-sm leading-relaxed">
 						Interactive side projects that sit outside the main portfolio work. Pick a project to open it here.
 					</p>
-					<div className="mt-6">
-						<p className="mb-3 text-[0.68rem] font-mono uppercase tracking-[0.16em] text-muted">Projects</p>
-						<ul className="flex flex-wrap gap-2 sm:gap-2.5">{renderProjectLinks()}</ul>
-					</div>
 				</div>
 			</section>
+
+			<div className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur-sm">
+				<div className="max-w-4xl mx-auto px-6 py-3">
+					<ul className="flex flex-wrap gap-2 sm:gap-2.5">{renderProjectLinks()}</ul>
+				</div>
+			</div>
 
 			<main className="max-w-4xl mx-auto sm:px-6 py-10 relative">
 				<div className="w-full border-y sm:border border-border bg-card/80 p-5 sm:p-6">
