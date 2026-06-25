@@ -15,6 +15,21 @@ const FADE_GAMMA = 1.5;            // Easing curve exponent for fade transitions
 const COLOR_GRADIENT_STEPS = 5;   // Number of color stops in the horizontal left-to-right gradient
 const MIN_CELL_SCALE = 0.8;        // Scale of a cell at the start of fade-in / end of fade-out
 const OPACITY_CULL_THRESHOLD = 0.001; // Skip drawing cells below this opacity
+const GLIDER_PATTERNS: ReadonlyArray<ReadonlyArray<[number, number]>> = [
+	// Diagonal gliders (3×3 bounding box)
+	[[1, 0], [2, 1], [0, 2], [1, 2], [2, 2]], // SE
+	[[1, 0], [0, 1], [0, 2], [1, 2], [2, 2]], // SW
+	[[0, 0], [1, 0], [2, 0], [2, 1], [1, 2]], // NE
+	[[0, 0], [1, 0], [2, 0], [0, 1], [1, 2]], // NW
+];
+const LWSS_PATTERNS: ReadonlyArray<ReadonlyArray<[number, number]>> = [
+	// Lightweight Spaceships (LWSS, 5×4 or 4×5 bounding box)
+	[[1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [4, 1], [4, 2], [0, 3], [3, 3]], // E
+	[[0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [4, 1], [0, 2], [1, 3], [4, 3]], // W
+	[[0, 0], [2, 0], [3, 1], [3, 2], [0, 3], [3, 3], [1, 4], [2, 4], [3, 4]], // S
+	[[0, 0], [1, 0], [2, 0], [0, 1], [3, 1], [0, 2], [0, 3], [1, 4], [3, 4]], // N
+];
+const LWSS_CHANCE = 0.1;
 
 // Derived constants
 const CELL_RENDER_SIZE_PX = CELL_SIZE_PX - CELL_INSET_PX * 2; // Rendered square size within the cell
@@ -226,6 +241,32 @@ export default function GameOfLifeBg() {
 	const handleNewGame = () => {
 		init();
 	};
+
+	const spawnGlider = useCallback((pixelX: number, pixelY: number) => {
+		const s = stateRef.current;
+		if (!s) return;
+		const originX = Math.floor(pixelX / CELL_SIZE_PX) - 1;
+		const originY = Math.floor(pixelY / CELL_SIZE_PX) - 1;
+		const pool = Math.random() < LWSS_CHANCE ? LWSS_PATTERNS : GLIDER_PATTERNS;
+		const pattern = pool[Math.floor(Math.random() * pool.length)];
+		for (const [dx, dy] of pattern) {
+			const cx = ((originX + dx) % s.cols + s.cols) % s.cols;
+			const cy = ((originY + dy) % s.rows + s.rows) % s.rows;
+			const idx = cy * s.cols + cx;
+			s.g0[idx] = 1;
+			s.g1[idx] = 1;
+			s.g2[idx] = 1;
+		}
+	}, []);
+
+	useEffect(() => {
+		function handleClick(e: MouseEvent) {
+			if (controlsRef.current?.contains(e.target as Node)) return;
+			spawnGlider(e.clientX, e.clientY + window.scrollY);
+		}
+		document.addEventListener("click", handleClick);
+		return () => document.removeEventListener("click", handleClick);
+	}, [spawnGlider]);
 
 	useEffect(() => {
 		if (!showControls) return;
