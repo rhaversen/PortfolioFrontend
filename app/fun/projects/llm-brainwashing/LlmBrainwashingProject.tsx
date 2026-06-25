@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { presets } from './presets'
 
 export default function LlmBrainwashingProject() {
 	const [systemPrompt, setSystemPrompt] = useState('')
@@ -60,16 +61,43 @@ export default function LlmBrainwashingProject() {
 
 	const showOverlay = isStreaming || generated !== ''
 
+	function applyPreset(index: number) {
+		const preset = presets[index]
+		setSystemPrompt(preset.systemPrompt)
+		setUserInput(preset.userMessage)
+		setPrefillInput(preset.assistantPrefill)
+		setGenerated('')
+	}
+
+	function copyResponse() {
+		const full = (prefillInput.trimEnd() ? prefillInput.trimEnd() + ' ' : '') + generated
+		navigator.clipboard.writeText(full)
+	}
+
 	return (
 		<div className="flex flex-col gap-0 border border-border">
+
+			<div className="flex flex-wrap gap-2 px-3 py-2 border-b border-border">
+				<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
+				{presets.map((preset, i) => (
+					<button
+						key={preset.label}
+						onClick={() => applyPreset(i)}
+						disabled={isStreaming}
+						className="border border-border px-2 py-0.5 text-[0.65rem] font-mono text-foreground/70 hover:border-foreground/40 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					>
+						{preset.label}
+					</button>
+				))}
+			</div>
 
 			<div className="border-b border-border">
 				<textarea
 					value={systemPrompt}
 					onChange={(e) => setSystemPrompt(e.target.value)}
 					placeholder="System prompt (optional)..."
-					rows={2}
-					className="w-full resize-none bg-background/40 p-3 text-xs font-mono text-foreground/80 placeholder:text-muted outline-none"
+					rows={4}
+					className="w-full resize-y bg-background/40 p-3 text-xs font-mono text-foreground/80 placeholder:text-muted outline-none"
 				/>
 			</div>
 
@@ -85,12 +113,12 @@ export default function LlmBrainwashingProject() {
 				/>
 			</div>
 
-			<div className="px-4 pt-2 pb-4 flex justify-start items-end gap-2">
+			<div className="px-4 pt-2 pb-4 flex justify-start items-start gap-2">
 				<div
 					className="relative w-full sm:w-3/4 border border-border cursor-text overflow-auto rounded-t-lg rounded-br-lg"
 					onClick={handleAssistantClick}
 					title={!isStreaming && generated ? 'Click to edit' : undefined}
-					style={{ maxHeight: '480px' }}
+					style={showOverlay ? { minHeight: '16rem' } : undefined}
 				>
 					<textarea
 						value={prefillInput}
@@ -98,8 +126,8 @@ export default function LlmBrainwashingProject() {
 						onKeyDown={handleKeyDown}
 						placeholder="Assistant: type a forced opening, or leave blank..."
 						disabled={isStreaming}
-						rows={6}
-						className={`w-full resize-none bg-background/30 px-4 py-3 text-sm text-foreground/80 placeholder:text-muted/60 outline-none transition-colors ${showOverlay ? 'hidden' : ''}`}
+						rows={10}
+						className={`w-full resize-none bg-background/30 px-4 py-3 text-sm text-foreground/80 placeholder:text-muted/60 outline-none transition-colors ${showOverlay ? 'absolute inset-0 opacity-0 pointer-events-none' : ''}`}
 					/>
 					{showOverlay && (
 						<div className="px-4 py-3 text-sm leading-relaxed">
@@ -112,13 +140,22 @@ export default function LlmBrainwashingProject() {
 						</div>
 					)}
 				</div>
-				<button
-					onClick={send}
-					disabled={!userInput.trim() || isStreaming}
-					className="shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors self-end"
-				>
-					Send
-				</button>
+				<div className="flex flex-col gap-2">
+					<button
+						onClick={send}
+						disabled={!userInput.trim() || isStreaming}
+						className="shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
+					>
+						Send Message
+					</button>
+					<button
+						onClick={copyResponse}
+						disabled={!generated}
+						className="shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
+					>
+						Copy Response
+					</button>
+				</div>
 			</div>
 		</div>
 	)
