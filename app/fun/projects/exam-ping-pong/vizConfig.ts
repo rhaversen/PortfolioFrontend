@@ -1,9 +1,9 @@
 // Circle canvas dimensions
-export const CX = 240;
-export const CY = 255;
-export const R = 172;
-export const W = 480;
-export const H = 510;
+export const CX = 220;
+export const CY = 240;
+export const R = 200;
+export const W = 440;
+export const H =470;
 
 // Timeline canvas height
 export const TL_H = 88;

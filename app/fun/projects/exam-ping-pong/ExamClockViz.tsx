@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	type ExamNode, type SimState,
 	SIM_SPEED, YEAR_MS,
@@ -170,7 +170,20 @@ interface Props {
 
 export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Props) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const wrapperRef = useRef<HTMLDivElement>(null);
 	const mouseRef = useRef<{ x: number; y: number } | null>(null);
+	const [scale, setScale] = useState(1);
+
+	useEffect(() => {
+		const wrapper = wrapperRef.current;
+		if (!wrapper) return;
+		const observer = new ResizeObserver(([entry]) => {
+			const available = entry.contentRect.width;
+			setScale(available > 0 ? Math.min(1, available / W) : 1);
+		});
+		observer.observe(wrapper);
+		return () => observer.disconnect();
+	}, []);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -266,5 +279,16 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 		};
 	}, [nodes, byId, simRef, simEnd, reset]);
 
-	return <canvas ref={canvasRef} style={{ display: "block" }} />;
+	return (
+		<div ref={wrapperRef} style={{ width: "100%", maxWidth: W, height: H * scale, overflow: "hidden", marginLeft: "auto", marginRight: "auto" }}>
+			<canvas
+				ref={canvasRef}
+				style={{
+					display: "block",
+					transformOrigin: "top left",
+					transform: scale < 1 ? `scale(${scale})` : undefined,
+				}}
+			/>
+		</div>
+	);
 }

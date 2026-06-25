@@ -21,33 +21,35 @@ export default function ExamPingPongProject() {
 	return (
 		<div className="space-y-5">
 			{nodes.length > 0 && (
-				<div className="space-y-3">
-					<div className="flex gap-6 justify-center items-start overflow-x-auto">
+				<div className="flex flex-col sm:flex-row gap-6 justify-center items-start w-full min-w-0">
+					<div className="order-2 sm:order-1 shrink-0">
 						<ExamUpcomingList nodes={nodes} simRef={simRef} />
+					</div>
+					<div className="order-1 sm:order-2 flex flex-col gap-3 min-w-0 w-full sm:w-auto">
 						<ExamClockViz nodes={nodes} byId={byId} simRef={simRef} simEnd={simEnd} reset={reset} />
-					</div>
-					<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
-					<div className="flex justify-center">
-						<button
-							onClick={reset}
-							className="border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors"
-						>
-							↺  Reset
-						</button>
-					</div>
-					<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
-						<span className="flex items-center gap-1.5">
-						<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "rgba(0,0,0,0.40)" }} />
-							upcoming
-						</span>
-						<span className="flex items-center gap-1.5">
-							<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#4ade80" }} />
-							passed
-						</span>
-						<span className="flex items-center gap-1.5">
-							<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#f87171" }} />
-							failed → retry
-						</span>
+						<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
+						<div className="flex justify-center">
+							<button
+								onClick={reset}
+								className="border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors"
+							>
+								↺  Reset
+							</button>
+						</div>
+						<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
+							<span className="flex items-center gap-1.5">
+								<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "rgba(0,0,0,0.40)" }} />
+								upcoming
+							</span>
+							<span className="flex items-center gap-1.5">
+								<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#4ade80" }} />
+								passed
+							</span>
+							<span className="flex items-center gap-1.5">
+								<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#f87171" }} />
+								failed → retry
+							</span>
+						</div>
 					</div>
 				</div>
 			)}
