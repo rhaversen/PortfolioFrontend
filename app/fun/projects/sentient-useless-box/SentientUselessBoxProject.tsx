@@ -10,9 +10,9 @@ type BoxAction = 'turn_off' | 'turn_on'
 type MessageParam = { role: 'user' | 'assistant'; content: unknown }
 
 type Block =
-	| { id: string; kind: 'user'; text: string }
+	| { id: string; kind: 'user'; text: string; timestamp: string }
 	| { id: string; kind: 'text'; text: string; done: boolean }
-	| { id: string; kind: 'tool'; name: BoxAction }
+	| { id: string; kind: 'tool'; name: BoxAction; timestamp: string }
 
 export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
@@ -24,8 +24,17 @@ export default function SentientUselessBoxProject() {
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const idRef = useRef(0)
 	const initialSentRef = useRef(false)
+	const sessionStartRef = useRef<number>(0)
 
 	const getId = () => String(idRef.current++)
+
+	function getTimestamp() {
+		const ms = Date.now() - sessionStartRef.current
+		const totalSeconds = Math.floor(ms / 1000)
+		const minutes = Math.floor(totalSeconds / 60)
+		const seconds = totalSeconds % 60
+		return minutes === 0 ? `T+${seconds}s` : `T+${minutes}m ${seconds}s`
+	}
 
 	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -43,8 +52,9 @@ export default function SentientUselessBoxProject() {
 		socket.on('connect', () => {
 			if (initialSentRef.current) return
 			initialSentRef.current = true
+			sessionStartRef.current = Date.now()
 			setIsProcessing(true)
-			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.' }])
+			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'T+0s' }])
 			socket.emit('box:trigger', { toggleState: false })
 		})
 
@@ -63,12 +73,13 @@ export default function SentientUselessBoxProject() {
 			if (toolName === 'turn_off') setSwitchOn(false)
 			if (toolName === 'turn_on') setSwitchOn(true)
 			const toolId = getId()
+			const ts = getTimestamp()
 			setBlocks((prev) => {
 				const last = prev[prev.length - 1]
 				const closed = last?.kind === 'text' && !last.done
 					? [...prev.slice(0, -1), { ...last, done: true }]
 					: prev
-				return [...closed, { id: toolId, kind: 'tool', name: toolName }]
+				return [...closed, { id: toolId, kind: 'tool', name: toolName, timestamp: ts }]
 			})
 		})
 
@@ -103,7 +114,8 @@ export default function SentientUselessBoxProject() {
 		setSwitchOn(false)
 		setIsProcessing(true)
 		historyRef.current = []
-		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.' }])
+		sessionStartRef.current = Date.now()
+		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'T+0s' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false })
 	}
@@ -123,6 +135,7 @@ export default function SentientUselessBoxProject() {
 					id: getId(),
 					kind: 'user' as const,
 					text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.',
+					timestamp: getTimestamp(),
 				},
 			]
 		})
@@ -197,7 +210,10 @@ export default function SentientUselessBoxProject() {
 						if (block.kind === 'user') {
 							return (
 								<div key={block.id} className="px-4 py-3 bg-border/10">
-									<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted mb-1.5">Event</p>
+									<div className="flex items-center justify-between mb-1.5">
+										<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Event</p>
+										<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
+									</div>
 									<p className="text-xs font-mono text-foreground/70">{block.text}</p>
 								</div>
 							)
@@ -226,7 +242,10 @@ export default function SentientUselessBoxProject() {
 
 							return (
 								<div key={block.id} className="px-4 py-3 bg-background/60">
-									<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted mb-2">Tool call</p>
+								<div className="flex items-center justify-between mb-2">
+									<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Tool call</p>
+									<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
+								</div>
 									<span className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
 										{labels[block.name]}
 									</span>
