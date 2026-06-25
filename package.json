@@ -8,7 +8,8 @@
 		"start": "next start",
 		"lint": "eslint .",
 		"lint:fix": "eslint --fix .",
-		"spellcheck": "npx cspell ."
+		"spellcheck": "npx cspell .",
+		"fix:classes": "node scripts/fix-canonical-classes.mjs"
 	},
 	"dependencies": {
 		"next": "16.2.9",
@@ -26,6 +27,8 @@
 		"cspell": "^10.0.1",
 		"eslint": "^9.39.1",
 		"eslint-config-next": "16.2.9",
+		"glob": "^13.0.6",
+		"tailwind-api-utils": "^1.0.3",
 		"tailwindcss": "^4",
 		"typescript": "^6"
 	},
