@@ -14,9 +14,8 @@ type Block =
 	| { id: string; kind: 'text'; text: string; done: boolean }
 	| { id: string; kind: 'tool'; name: BoxAction; timestamp: string }
 
-type PendingAction =
-	| { type: 'toolCall'; toolName: BoxAction; ts: string }
-	| { type: 'done'; history: MessageParam[] }
+type PendingAction = { type: 'done'; history: MessageParam[] }
+type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: BoxAction; ts: string }
 
 export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
@@ -32,7 +31,7 @@ export default function SentientUselessBoxProject() {
 	const sessionStartRef = useRef<number>(0)
 	const lastScrollDirectionRef = useRef<'down' | 'up' | null>(null)
 	const prevScrollTopRef = useRef(0)
-	const chunkQueueRef = useRef('')
+	const segQueueRef = useRef<QueueSegment[]>([])
 	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const pendingActionsRef = useRef<PendingAction[]>([])
 	const getId = () => String(idRef.current++)
@@ -52,17 +51,7 @@ export default function SentientUselessBoxProject() {
 	const flushQueue = useCallback(() => {
 		const actions = pendingActionsRef.current.splice(0)
 		for (const action of actions) {
-			if (action.type === 'toolCall') {
-				if (action.toolName === 'turn_off') { setSwitchOn(false) }
-				if (action.toolName === 'turn_on') { setSwitchOn(true) }
-				setBlocks((prev) => {
-					const last = prev[prev.length - 1]
-					const closed = last?.kind === 'text' && !last.done
-						? [...prev.slice(0, -1), { ...last, done: true }]
-						: prev
-					return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: action.toolName, timestamp: action.ts }]
-				})
-			} else if (action.type === 'done') {
+			if (action.type === 'done') {
 				historyRef.current = action.history
 				setBlocks((prev) => {
 					const last = prev[prev.length - 1]
@@ -79,21 +68,36 @@ export default function SentientUselessBoxProject() {
 	const startDrain = useCallback(() => {
 		if (drainIntervalRef.current !== null) { return }
 		drainIntervalRef.current = setInterval(() => {
-			if (chunkQueueRef.current.length === 0) {
+			const seg = segQueueRef.current[0]
+			if (!seg) {
 				clearInterval(drainIntervalRef.current!)
 				drainIntervalRef.current = null
 				flushQueue()
 				return
 			}
-			const char = chunkQueueRef.current[0]
-			chunkQueueRef.current = chunkQueueRef.current.slice(1)
-			setBlocks((prev) => {
-				const last = prev[prev.length - 1]
-				if (last?.kind === 'text' && !last.done) {
-					return [...prev.slice(0, -1), { ...last, text: last.text + char }]
-				}
-				return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
-			})
+			if (seg.type === 'tool') {
+				segQueueRef.current.shift()
+				if (seg.toolName === 'turn_off') { setSwitchOn(false) }
+				if (seg.toolName === 'turn_on') { setSwitchOn(true) }
+				setBlocks((prev) => {
+					const last = prev[prev.length - 1]
+					const closed = last?.kind === 'text' && !last.done
+						? [...prev.slice(0, -1), { ...last, done: true }]
+						: prev
+					return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, timestamp: seg.ts }]
+				})
+			} else {
+				const char = seg.text[0]
+				seg.text = seg.text.slice(1)
+				if (seg.text.length === 0) { segQueueRef.current.shift() }
+				setBlocks((prev) => {
+					const last = prev[prev.length - 1]
+					if (last?.kind === 'text' && !last.done) {
+						return [...prev.slice(0, -1), { ...last, text: last.text + char }]
+					}
+					return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
+				})
+			}
 		}, 15)
 	}, [flushQueue])
 
@@ -121,12 +125,18 @@ export default function SentientUselessBoxProject() {
 		})
 
 		socket.on('box:chunk', ({ text }: { text: string }) => {
-			chunkQueueRef.current += text
+			const last = segQueueRef.current[segQueueRef.current.length - 1]
+			if (last?.type === 'text') {
+				last.text += text
+			} else {
+				segQueueRef.current.push({ type: 'text', text })
+			}
 			startDrain()
 		})
 
 		socket.on('box:toolCall', ({ toolName }: { toolName: BoxAction }) => {
-			pendingActionsRef.current.push({ type: 'toolCall', toolName, ts: getTimestamp() })
+			const ts = getTimestamp()
+			segQueueRef.current.push({ type: 'tool', toolName, ts })
 		})
 
 		socket.on('box:done', ({ history }: { toolCall: BoxAction | null; history: MessageParam[] }) => {
@@ -134,7 +144,7 @@ export default function SentientUselessBoxProject() {
 		})
 
 		socket.on('box:error', () => {
-			chunkQueueRef.current = ''
+			segQueueRef.current = []
 			pendingActionsRef.current = []
 			if (drainIntervalRef.current !== null) {
 				clearInterval(drainIntervalRef.current)
@@ -168,7 +178,7 @@ export default function SentientUselessBoxProject() {
 		setSwitchOn(false)
 		setIsProcessing(true)
 		historyRef.current = []
-		chunkQueueRef.current = ''
+		segQueueRef.current = []
 		pendingActionsRef.current = []
 		if (drainIntervalRef.current !== null) {
 			clearInterval(drainIntervalRef.current)
@@ -187,20 +197,46 @@ export default function SentientUselessBoxProject() {
 		setIsProcessing(true)
 		const ts = getTimestamp()
 
-		setBlocks((prev) => {
-			const closed = prev.map((b) =>
-				b.kind === 'text' && !b.done ? { ...b, done: true } : b,
-			)
-			return [
-				...closed,
-				{
-					id: getId(),
-					kind: 'user' as const,
-					text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.',
-					timestamp: ts,
-				},
-			]
-		})
+		// Flush any in-flight queue immediately so the user block appears in the right order
+		const remaining = segQueueRef.current.splice(0)
+		pendingActionsRef.current = []
+		if (drainIntervalRef.current !== null) {
+			clearInterval(drainIntervalRef.current)
+			drainIntervalRef.current = null
+		}
+		if (remaining.length > 0) {
+			setBlocks((prev) => {
+				let updated = prev
+				for (const seg of remaining) {
+					if (seg.type === 'text') {
+						const last = updated[updated.length - 1]
+						if (last?.kind === 'text' && !last.done) {
+							updated = [...updated.slice(0, -1), { ...last, text: last.text + seg.text, done: true }]
+						} else if (seg.text.length > 0) {
+							updated = [...updated, { id: String(idRef.current++), kind: 'text' as const, text: seg.text, done: true }]
+						}
+					} else {
+						const last = updated[updated.length - 1]
+						const closed = last?.kind === 'text' && !last.done
+							? [...updated.slice(0, -1), { ...last, done: true }]
+							: updated
+						updated = [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, timestamp: seg.ts }]
+					}
+				}
+				const last = updated[updated.length - 1]
+				if (last?.kind === 'text' && !last.done) {
+					updated = [...updated.slice(0, -1), { ...last, done: true }]
+				}
+				return [...updated, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
+			})
+		} else {
+			setBlocks((prev) => {
+				const closed = prev.map((b) =>
+					b.kind === 'text' && !b.done ? { ...b, done: true } : b,
+				)
+				return [...closed, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
+			})
+		}
 
 		socketRef.current?.emit('box:trigger', {
 			toggleState: newState,
