@@ -23,6 +23,7 @@ export default function SentientUselessBoxProject() {
 	const historyRef = useRef<MessageParam[]>([])
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const idRef = useRef(0)
+	const initialSentRef = useRef(false)
 
 	const getId = () => String(idRef.current++)
 
@@ -38,6 +39,14 @@ export default function SentientUselessBoxProject() {
 		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
 		const socket = io(apiUrl)
 		socketRef.current = socket
+
+		socket.on('connect', () => {
+			if (initialSentRef.current) return
+			initialSentRef.current = true
+			setIsProcessing(true)
+			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.' }])
+			socket.emit('box:trigger', { toggleState: false })
+		})
 
 		socket.on('box:chunk', ({ text }: { text: string }) => {
 			const newId = getId()
@@ -92,9 +101,11 @@ export default function SentientUselessBoxProject() {
 
 	function handleReset() {
 		setSwitchOn(false)
-		setBlocks([])
-		setIsProcessing(false)
+		setIsProcessing(true)
 		historyRef.current = []
+		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.' }])
+		socketRef.current?.emit('box:reset')
+		socketRef.current?.emit('box:trigger', { toggleState: false })
 	}
 
 	function handleToggle() {
@@ -179,7 +190,7 @@ export default function SentientUselessBoxProject() {
 			>
 				{blocks.length === 0 ? (
 					<div className="flex items-center justify-center h-full">
-						<p className="text-xs font-mono text-muted">Toggle the switch to begin.</p>
+						<p className="text-xs font-mono text-muted">Connecting...</p>
 					</div>
 				) : (
 					blocks.map((block) => {
