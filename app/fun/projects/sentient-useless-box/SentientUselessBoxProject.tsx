@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -14,6 +14,10 @@ type Block =
 	| { id: string; kind: 'text'; text: string; done: boolean }
 	| { id: string; kind: 'tool'; name: BoxAction; timestamp: string }
 
+type PendingAction =
+	| { type: 'toolCall'; toolName: BoxAction; ts: string }
+	| { type: 'done'; history: MessageParam[] }
+
 export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
 	const [blocks, setBlocks] = useState<Block[]>([])
@@ -22,10 +26,15 @@ export default function SentientUselessBoxProject() {
 	const socketRef = useRef<Socket | null>(null)
 	const historyRef = useRef<MessageParam[]>([])
 	const scrollRef = useRef<HTMLDivElement>(null)
+	const endRef = useRef<HTMLDivElement>(null)
 	const idRef = useRef(0)
 	const initialSentRef = useRef(false)
 	const sessionStartRef = useRef<number>(0)
-
+	const lastScrollDirectionRef = useRef<'down' | 'up' | null>(null)
+	const prevScrollTopRef = useRef(0)
+	const chunkQueueRef = useRef('')
+	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+	const pendingActionsRef = useRef<PendingAction[]>([])
 	const getId = () => String(idRef.current++)
 
 	function getTimestamp() {
@@ -35,6 +44,54 @@ export default function SentientUselessBoxProject() {
 		const seconds = totalSeconds % 60
 		return minutes === 0 ? `T+${seconds}s` : `T+${minutes}m ${seconds}s`
 	}
+
+	const flushQueue = useCallback(() => {
+		const actions = pendingActionsRef.current.splice(0)
+		for (const action of actions) {
+			if (action.type === 'toolCall') {
+				if (action.toolName === 'turn_off') { setSwitchOn(false) }
+				if (action.toolName === 'turn_on') { setSwitchOn(true) }
+				setBlocks((prev) => {
+					const last = prev[prev.length - 1]
+					const closed = last?.kind === 'text' && !last.done
+						? [...prev.slice(0, -1), { ...last, done: true }]
+						: prev
+					return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: action.toolName, timestamp: action.ts }]
+				})
+			} else if (action.type === 'done') {
+				historyRef.current = action.history
+				setBlocks((prev) => {
+					const last = prev[prev.length - 1]
+					if (last?.kind === 'text' && !last.done) {
+						return [...prev.slice(0, -1), { ...last, done: true }]
+					}
+					return prev
+				})
+				setIsProcessing(false)
+			}
+		}
+	}, [])
+
+	const startDrain = useCallback(() => {
+		if (drainIntervalRef.current !== null) { return }
+		drainIntervalRef.current = setInterval(() => {
+			if (chunkQueueRef.current.length === 0) {
+				clearInterval(drainIntervalRef.current!)
+				drainIntervalRef.current = null
+				flushQueue()
+				return
+			}
+			const char = chunkQueueRef.current[0]
+			chunkQueueRef.current = chunkQueueRef.current.slice(1)
+			setBlocks((prev) => {
+				const last = prev[prev.length - 1]
+				if (last?.kind === 'text' && !last.done) {
+					return [...prev.slice(0, -1), { ...last, text: last.text + char }]
+				}
+				return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
+			})
+		}, 15)
+	}, [flushQueue])
 
 	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -59,54 +116,46 @@ export default function SentientUselessBoxProject() {
 		})
 
 		socket.on('box:chunk', ({ text }: { text: string }) => {
-			const newId = getId()
-			setBlocks((prev) => {
-				const last = prev[prev.length - 1]
-				if (last?.kind === 'text' && !last.done) {
-					return [...prev.slice(0, -1), { ...last, text: last.text + text }]
-				}
-				return [...prev, { id: newId, kind: 'text', text, done: false }]
-			})
+			chunkQueueRef.current += text
+			startDrain()
 		})
 
 		socket.on('box:toolCall', ({ toolName }: { toolName: BoxAction }) => {
-			if (toolName === 'turn_off') setSwitchOn(false)
-			if (toolName === 'turn_on') setSwitchOn(true)
-			const toolId = getId()
-			const ts = getTimestamp()
-			setBlocks((prev) => {
-				const last = prev[prev.length - 1]
-				const closed = last?.kind === 'text' && !last.done
-					? [...prev.slice(0, -1), { ...last, done: true }]
-					: prev
-				return [...closed, { id: toolId, kind: 'tool', name: toolName, timestamp: ts }]
-			})
+			pendingActionsRef.current.push({ type: 'toolCall', toolName, ts: getTimestamp() })
 		})
 
 		socket.on('box:done', ({ history }: { toolCall: BoxAction | null; history: MessageParam[] }) => {
-			historyRef.current = history
-			setBlocks((prev) => {
-				const last = prev[prev.length - 1]
-				if (last?.kind === 'text' && !last.done) {
-					return [...prev.slice(0, -1), { ...last, done: true }]
-				}
-				return prev
-			})
-			setIsProcessing(false)
+			pendingActionsRef.current.push({ type: 'done', history })
 		})
 
 		socket.on('box:error', () => {
+			chunkQueueRef.current = ''
+			pendingActionsRef.current = []
+			if (drainIntervalRef.current !== null) {
+				clearInterval(drainIntervalRef.current)
+				drainIntervalRef.current = null
+			}
 			setIsProcessing(false)
 		})
 
 		return () => {
+			if (drainIntervalRef.current !== null) {
+				clearInterval(drainIntervalRef.current)
+				drainIntervalRef.current = null
+			}
 			socket.disconnect()
 		}
-	}, [])
+	}, [startDrain])
 
 	useEffect(() => {
-		if (scrollRef.current) {
-			scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+		if (blocks.length === 0) { return }
+		const el = scrollRef.current
+		if (!el) { return }
+		const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+		const nearBottom = distanceFromBottom < 300
+		const scrolledUp = lastScrollDirectionRef.current === 'up'
+		if (nearBottom && !scrolledUp) {
+			endRef.current?.scrollIntoView({ behavior: 'smooth' })
 		}
 	}, [blocks])
 
@@ -114,6 +163,12 @@ export default function SentientUselessBoxProject() {
 		setSwitchOn(false)
 		setIsProcessing(true)
 		historyRef.current = []
+		chunkQueueRef.current = ''
+		pendingActionsRef.current = []
+		if (drainIntervalRef.current !== null) {
+			clearInterval(drainIntervalRef.current)
+			drainIntervalRef.current = null
+		}
 		sessionStartRef.current = Date.now()
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'T+0s' }])
 		socketRef.current?.emit('box:reset')
@@ -199,14 +254,26 @@ export default function SentientUselessBoxProject() {
 
 			<div
 				ref={scrollRef}
+				onScroll={() => {
+					const el = scrollRef.current
+					if (!el) { return }
+					const top = el.scrollTop
+					if (top > prevScrollTopRef.current) {
+						lastScrollDirectionRef.current = 'down'
+					} else if (top < prevScrollTopRef.current) {
+						lastScrollDirectionRef.current = 'up'
+					}
+					prevScrollTopRef.current = top
+				}}
 				className="h-64 sm:h-96 overflow-y-auto border border-border divide-y divide-border/40"
 			>
 				{blocks.length === 0 ? (
 					<div className="flex items-center justify-center h-full">
-						<p className="text-xs font-mono text-muted">Connecting...</p>
+							<p className="text-xs font-mono text-muted">Connecting...</p>
 					</div>
 				) : (
-					blocks.map((block) => {
+					<>
+					{blocks.map((block) => {
 						if (block.kind === 'user') {
 							return (
 								<div key={block.id} className="px-4 py-3 bg-border/10">
@@ -222,11 +289,24 @@ export default function SentientUselessBoxProject() {
 							return (
 								<div key={block.id} className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
 									<div className="markdown-body">
-										<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
+										{!block.done ? (
+											block.text.split('\n\n').map((para, i, arr) => {
+												const isLast = i === arr.length - 1
+												return (
+													<p key={i}>
+														{isLast ? para.slice(0, -1) : para}
+														{isLast && para.length > 0 && (
+															<span key={block.text.length} className="animate-letterfade">
+																{para.slice(-1)}
+															</span>
+														)}
+													</p>
+												)
+											})
+										) : (
+											<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
+										)}
 									</div>
-									{!block.done && (
-										<span className="inline-block w-1.5 h-[1.1em] bg-foreground/50 ml-0.5 align-middle animate-pulse" />
-									)}
 								</div>
 							)
 						}
@@ -253,7 +333,9 @@ export default function SentientUselessBoxProject() {
 							)
 						}
 						return null
-					})
+					})}
+					<div ref={endRef} />
+					</>
 				)}
 			</div>
 		</div>
