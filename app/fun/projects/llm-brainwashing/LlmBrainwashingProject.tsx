@@ -81,13 +81,13 @@ export default function LlmBrainwashingProject() {
 					placeholder="You: type your message here..."
 					disabled={isStreaming}
 					rows={4}
-					className="w-[75%] resize-none border border-border bg-border/20 px-3 py-2 text-sm text-foreground/90 placeholder:text-muted/60 outline-none focus:border-foreground/30 disabled:opacity-40 transition-colors"
+				className="w-full sm:w-3/4 resize-none border border-border bg-border/20 px-3 py-2 text-sm text-foreground/90 placeholder:text-muted/60 outline-none focus:border-foreground/30 disabled:opacity-40 transition-colors rounded-t-lg rounded-bl-lg"
 				/>
 			</div>
 
 			<div className="px-4 pt-2 pb-4 flex justify-start items-end gap-2">
 				<div
-					className="relative w-[75%] border border-border cursor-text overflow-auto"
+					className="relative w-full sm:w-3/4 border border-border cursor-text overflow-auto rounded-t-lg rounded-br-lg"
 					onClick={handleAssistantClick}
 					title={!isStreaming && generated ? 'Click to edit' : undefined}
 					style={{ maxHeight: '480px' }}

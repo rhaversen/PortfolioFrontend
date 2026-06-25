@@ -12,6 +12,5 @@ export type SideProject = {
 	id: string;
 	title: string;
 	summary: string;
-	stack: string[];
 	Component: ComponentType;
 };

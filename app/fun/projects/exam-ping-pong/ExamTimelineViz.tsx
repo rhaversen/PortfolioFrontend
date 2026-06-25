@@ -79,6 +79,9 @@ function drawTimeline(
 			? (hovered ? "#f87171" : "rgba(239,68,68,0.55)")
 			: (hovered ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.40)");
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 	}
 
 	// Arc particles
@@ -102,6 +105,9 @@ function drawTimeline(
 		ctx.arc(x, lineY, 4, 0, Math.PI * 2);
 		ctx.fillStyle = p.color === "#f87171" ? "rgba(239,68,68,0.55)" : p.color;
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 		ctx.globalAlpha = 1;
 	}
 
@@ -115,10 +121,10 @@ function drawTimeline(
 	// "Now" needle
 	const nowX = Math.max(ML, Math.min(canvasW - MR, msToX(sim.time)));
 	ctx.beginPath();
-	ctx.moveTo(nowX, lineY - 12);
+	ctx.moveTo(nowX, lineY - 5);
 	ctx.lineTo(nowX, lineY + 12);
-	ctx.strokeStyle = "rgba(0,0,0,0.80)";
-	ctx.lineWidth = 1.5;
+	ctx.strokeStyle = "rgba(0,0,0,0.68)";
+	ctx.lineWidth = 2;
 	ctx.lineCap = "round";
 	ctx.stroke();
 	ctx.beginPath();
@@ -126,7 +132,7 @@ function drawTimeline(
 	ctx.lineTo(nowX + 4, lineY - 12);
 	ctx.lineTo(nowX, lineY - 5);
 	ctx.closePath();
-	ctx.fillStyle = "rgba(0,0,0,0.75)";
+	ctx.fillStyle = "rgba(0,0,0,0.68)";
 	ctx.fill();
 
 	// Tooltip

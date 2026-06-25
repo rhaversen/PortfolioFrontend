@@ -1,27 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
-// Modifiable constants for the Game of Life background effect
-const CELL_SIZE_PX = 100;          // Grid cell size in pixels (width and height of each tile)
+const CELL_SIZE_PX = 50;           // Grid cell size in pixels (width and height of each tile)
 const CELL_INSET_PX = 5;           // Padding inside each cell before the rounded rectangle begins
 const INITIAL_LIVE_DENSITY = 0.5;  // Initial probability that a cell starts alive
-const GENERATION_INTERVAL_MS = 1000; // Milliseconds between Game of Life generations
 const FADE_GENERATION_STEPS = 2;   // How many generations a fade-in or fade-out spans
-const CANVAS_BLUR_PX = 10;          // CSS blur applied to the whole canvas (softens the grid)
+const CANVAS_BLUR_PX = 10;         // CSS blur applied to the whole canvas (softens the grid)
 const MAX_CELL_OPACITY = 0.8;      // Maximum opacity of a fully visible cell
 const RGB_CHANNEL_MAX = 255;       // Maximum value for each RGB channel
 const PALETTE_START_RGB = { r: 170, g: 178, b: 198 }; // Left side of the gradient palette
 const PALETTE_END_RGB = { r: 194, g: 176, b: 188 };   // Right side of the gradient palette
-const FADE_GAMMA = 1.5;              // Easing curve exponent for fade transitions (higher = snappier)
+const FADE_GAMMA = 1.5;            // Easing curve exponent for fade transitions (higher = snappier)
 const COLOR_GRADIENT_STEPS = 5;   // Number of color stops in the horizontal left-to-right gradient
 const MIN_CELL_SCALE = 0.8;        // Scale of a cell at the start of fade-in / end of fade-out
 const OPACITY_CULL_THRESHOLD = 0.001; // Skip drawing cells below this opacity
+const GLIDER_PATTERNS: ReadonlyArray<ReadonlyArray<[number, number]>> = [
+	// Diagonal gliders (3×3 bounding box)
+	[[1, 0], [2, 1], [0, 2], [1, 2], [2, 2]], // SE
+	[[1, 0], [0, 1], [0, 2], [1, 2], [2, 2]], // SW
+	[[0, 0], [1, 0], [2, 0], [2, 1], [1, 2]], // NE
+	[[0, 0], [1, 0], [2, 0], [0, 1], [1, 2]], // NW
+];
+const LWSS_PATTERNS: ReadonlyArray<ReadonlyArray<[number, number]>> = [
+	// Lightweight Spaceships (LWSS, 5×4 or 4×5 bounding box)
+	[[1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [4, 1], [4, 2], [0, 3], [3, 3]], // E
+	[[0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [4, 1], [0, 2], [1, 3], [4, 3]], // W
+	[[0, 0], [2, 0], [3, 1], [3, 2], [0, 3], [3, 3], [1, 4], [2, 4], [3, 4]], // S
+	[[0, 0], [1, 0], [2, 0], [0, 1], [3, 1], [0, 2], [0, 3], [1, 4], [3, 4]], // N
+];
+const LWSS_CHANCE = 0.05;
 
 // Derived constants
 const CELL_RENDER_SIZE_PX = CELL_SIZE_PX - CELL_INSET_PX * 2; // Rendered square size within the cell
 const CELL_CORNER_RADIUS_PX = CELL_RENDER_SIZE_PX / 2; // Corner radius of the rounded rectangle (fully circular)
-const FADE_DURATION_MS = FADE_GENERATION_STEPS * GENERATION_INTERVAL_MS; // Fade duration in milliseconds
+
+const DEFAULT_INTERVAL_MS = 1000;      // Default milliseconds between Game of Life generations
+const DEFAULT_SPEED_MULTIPLIER = 1.0;
 
 function lerp(a: number, b: number, t: number) {
 	return a + (b - a) * t;
@@ -59,12 +74,21 @@ interface State {
 	t1: number;
 	cols: number;
 	rows: number;
+	interval: number; // last-applied interval, used to detect speed changes and rescale timestamps
 }
 
 export default function GameOfLifeBg() {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const spritesRef = useRef<HTMLCanvasElement[]>([]);
 	const stateRef = useRef<State | null>(null);
+
+	// Applied settings used by the draw/init loops
+	const intervalRef = useRef(DEFAULT_INTERVAL_MS);
+
+	// UI state
+	const [speedMultiplier, setSpeedMultiplier] = useState(DEFAULT_SPEED_MULTIPLIER);
+	const [showControls, setShowControls] = useState(false);
+	const controlsRef = useRef<HTMLDivElement>(null);
 
 	const createSprite = useCallback((color: string) => {
 		const sprite = document.createElement("canvas");
@@ -84,6 +108,7 @@ export default function GameOfLifeBg() {
 	const init = useCallback(() => {
 		const canvas = canvasRef.current;
 		if (!canvas) return;
+
 		const palette = Array.from({ length: COLOR_GRADIENT_STEPS }, (_, i) => {
 			const t = i / Math.max(COLOR_GRADIENT_STEPS - 1, 1);
 			const r = Math.round(Math.min(RGB_CHANNEL_MAX, lerp(PALETTE_START_RGB.r, PALETTE_END_RGB.r, t)));
@@ -110,9 +135,10 @@ export default function GameOfLifeBg() {
 
 		stateRef.current = {
 			g0, g1, g2,
-			t0: now - GENERATION_INTERVAL_MS,
+			t0: now - intervalRef.current,
 			t1: now,
 			cols, rows,
+			interval: intervalRef.current,
 		};
 	}, [createSprite]);
 
@@ -132,8 +158,18 @@ export default function GameOfLifeBg() {
 			if (!s || !ctx || !canvas || sprites.length === 0) return;
 
 			const now = performance.now();
+			const interval = intervalRef.current;
 
-			if (now - s.t1 >= GENERATION_INTERVAL_MS) {
+			if (interval !== s.interval) {
+				const scale = interval / s.interval;
+				s.t0 = now - (now - s.t0) * scale;
+				s.t1 = now - (now - s.t1) * scale;
+				s.interval = interval;
+			}
+
+			const fadeDuration = FADE_GENERATION_STEPS * interval;
+
+			if (now - s.t1 >= interval) {
 				s.g0 = s.g1;
 				s.g1 = s.g2;
 				s.g2 = stepGrid(s.g2, s.rows, s.cols);
@@ -141,8 +177,8 @@ export default function GameOfLifeBg() {
 				s.t1 = now;
 			}
 
-			const olderT = Math.pow(Math.min((now - s.t0) / FADE_DURATION_MS, 1), FADE_GAMMA);
-			const newerT = Math.pow(Math.min((now - s.t1) / FADE_DURATION_MS, 1), FADE_GAMMA);
+			const olderT = Math.pow(Math.min((now - s.t0) / fadeDuration, 1), FADE_GAMMA);
+			const newerT = Math.pow(Math.min((now - s.t1) / fadeDuration, 1), FADE_GAMMA);
 			const opacities = new Float32Array(8);
 			const scales = new Float32Array(8);
 			for (let i = 0; i < 8; i++) {
@@ -197,12 +233,102 @@ export default function GameOfLifeBg() {
 		};
 	}, [init]);
 
+	const handleSpeedChange = (val: number) => {
+		intervalRef.current = DEFAULT_INTERVAL_MS / val;
+		setSpeedMultiplier(val);
+	};
+
+	const handleNewGame = () => {
+		init();
+	};
+
+	const spawnGlider = useCallback((pixelX: number, pixelY: number) => {
+		const s = stateRef.current;
+		if (!s) return;
+		const originX = Math.floor(pixelX / CELL_SIZE_PX) - 1;
+		const originY = Math.floor(pixelY / CELL_SIZE_PX) - 1;
+		const pool = Math.random() < LWSS_CHANCE ? LWSS_PATTERNS : GLIDER_PATTERNS;
+		const pattern = pool[Math.floor(Math.random() * pool.length)];
+		for (const [dx, dy] of pattern) {
+			const cx = ((originX + dx) % s.cols + s.cols) % s.cols;
+			const cy = ((originY + dy) % s.rows + s.rows) % s.rows;
+			const idx = cy * s.cols + cx;
+			s.g0[idx] = 1;
+			s.g1[idx] = 1;
+			s.g2[idx] = 1;
+		}
+	}, []);
+
+	useEffect(() => {
+		function handleClick(e: MouseEvent) {
+			if (controlsRef.current?.contains(e.target as Node)) return;
+			spawnGlider(e.clientX, e.clientY + window.scrollY);
+		}
+		document.addEventListener("click", handleClick);
+		return () => document.removeEventListener("click", handleClick);
+	}, [spawnGlider]);
+
+	useEffect(() => {
+		if (!showControls) return;
+		function handleOutside(e: MouseEvent | TouchEvent) {
+			if (controlsRef.current && !controlsRef.current.contains(e.target as Node)) {
+				setShowControls(false);
+			}
+		}
+		document.addEventListener("mousedown", handleOutside);
+		document.addEventListener("touchstart", handleOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleOutside);
+			document.removeEventListener("touchstart", handleOutside);
+		};
+	}, [showControls]);
+
 	return (
-		<canvas
-			ref={canvasRef}
-			aria-hidden
-			className="absolute inset-0 w-full h-full pointer-events-none select-none z-0"
-			style={{ filter: `blur(${CANVAS_BLUR_PX}px)` }}
-		/>
+		<>
+			<canvas
+				ref={canvasRef}
+				aria-hidden
+				className="absolute inset-0 w-full h-full pointer-events-none select-none z-0"
+				style={{ filter: `blur(${CANVAS_BLUR_PX}px)` }}
+			/>
+			<div ref={controlsRef} className="fixed bottom-4 right-4 z-30">
+				<div className="relative flex flex-col items-end">
+					{showControls && (
+						<div className="absolute bottom-full mb-2 right-0 w-44 border border-border/20 bg-background/60 backdrop-blur-md p-3 space-y-3 text-[0.65rem] font-mono">
+							<span className="block text-muted text-[0.55rem] leading-relaxed">Conway&apos;s Game of Life background. Runs about as efficiently as scrolling Google search.</span>
+							<div className="space-y-1">
+								<div className="flex justify-between text-muted uppercase tracking-widest">
+									<span>Speed</span>
+									<span>{speedMultiplier.toFixed(1)}×</span>
+								</div>
+								<input
+									type="range"
+									min={1}
+									max={10}
+									step={0.1}
+									value={speedMultiplier}
+									onChange={e => handleSpeedChange(Number(e.target.value))}
+									className="w-full cursor-pointer accent-current text-foreground"
+									aria-label="Speed"
+								/>
+							</div>
+							<button
+								onClick={handleNewGame}
+								className="w-full border border-border/20 text-muted py-0.5 uppercase tracking-widest text-[0.6rem] cursor-pointer hover:text-foreground/70 hover:border-border/40 transition-colors"
+							>
+								New Game
+							</button>
+						</div>
+					)}
+					<button
+						onClick={() => setShowControls(v => !v)}
+						className={`text-[0.65rem] font-mono transition-colors select-none leading-none px-2 py-1 -mr-1 -mb-1 cursor-pointer rounded-sm bg-foreground/10 ${showControls ? "text-foreground/70" : "text-foreground/40 hover:text-foreground/60"}`}
+						aria-label="Toggle GOL controls"
+					>
+						gol
+					</button>
+				</div>
+			</div>
+		</>
 	);
 }

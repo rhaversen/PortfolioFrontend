@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	type ExamNode, type SimState,
-	SIM_SPEED, YEAR_MS,
+	SIM_SPEED, YEAR_MS, ARC_DURATION, GLOW_DUR,
 	circleAngle, cwDist, msToAngle, tickParticle,
 } from "./useExamSim";
-import { CX, CY, R, W, H, MONTHS, MONTH_DAY_1, angToXY } from "./vizConfig";
+import { CX, CY, R, W, H, MONTHS, MONTH_DAY_1, FADE_WINDOW_MS, angToXY } from "./vizConfig";
 import { drawGlowAt } from "./drawUtils";
 
 function drawFrame(
@@ -23,28 +23,30 @@ function drawFrame(
 	const simDate = new Date(sim.time);
 	const handAngle = msToAngle(sim.time);
 	const targeted = new Set(sim.particles.filter(p => p.targetId !== null).map(p => p.targetId as string));
+	const TRACK_COLOR = "rgba(0,0,0,0.25)";
+	const TRACK_WIDTH = 1.5;
 
 	// Circle
 	ctx.beginPath();
 	ctx.arc(CX, CY, R, 0, Math.PI * 2);
-	ctx.strokeStyle = "rgba(0,0,0,0.18)";
-	ctx.lineWidth = 1;
+	ctx.strokeStyle = TRACK_COLOR;
+	ctx.lineWidth = TRACK_WIDTH;
 	ctx.stroke();
 
 	// Month ticks + labels
 	for (let m = 0; m < 12; m++) {
 		const a = circleAngle(MONTH_DAY_1[m]);
-		const [ix, iy] = angToXY(a, R - 7);
+		const [ix, iy] = angToXY(a, R - 9);
 		const [ox, oy] = angToXY(a, R);
 		const [lx, ly] = angToXY(a, R + 16);
 		ctx.beginPath();
 		ctx.moveTo(ix, iy);
 		ctx.lineTo(ox, oy);
-		ctx.strokeStyle = "rgba(0,0,0,0.22)";
-		ctx.lineWidth = 1;
+		ctx.strokeStyle = TRACK_COLOR;
+		ctx.lineWidth = TRACK_WIDTH;
 		ctx.stroke();
 		ctx.font = "8px monospace";
-		ctx.fillStyle = "rgba(0,0,0,0.38)";
+		ctx.fillStyle = "rgba(0,0,0,0.42)";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillText(MONTHS[m], lx, ly);
@@ -52,16 +54,14 @@ function drawFrame(
 
 	// Season labels
 	ctx.textAlign = "center";
-	ctx.font = "bold 9px monospace";
-	ctx.fillStyle = "rgba(180, 120, 0, 0.70)";
+	ctx.font = "9px monospace";
+	ctx.fillStyle = "rgba(160, 100, 0, 0.52)";
 	ctx.fillText("SUMMER", CX, CY - R - 22);
-	ctx.fillStyle = "rgba(30, 100, 180, 0.65)";
+	ctx.fillStyle = "rgba(30, 90, 170, 0.48)";
 	ctx.fillText("WINTER", CX, CY + R + 22);
 
-	// Exam dots — fade in over the 6 months before the exam date.
-	// Retry exams (prevFailedId set) are invisible until their predecessor fires;
-	// the arc particle traveling to them IS their representation until it lands.
-	const FADE_WINDOW = YEAR_MS / 2;
+	// Universal visibility rule: alpha = clamp(0,1, 1 - (examDateMs - sim.time) / FADE_WINDOW_MS)
+	// Dots and arcs both use this — no special cases.
 	let hoveredNode: ExamNode | null = null;
 	for (const node of nodes) {
 		if (sim.fired.has(node.id)) continue;
@@ -69,35 +69,44 @@ function drawFrame(
 		if (node.dateMs <= sim.time) continue;
 		if (node.prevFailedId !== null && !sim.fired.has(node.prevFailedId)) continue;
 
-		const timeUntil = node.dateMs - sim.time;
-		const isRetryLanded = node.prevFailedId !== null && sim.fired.has(node.prevFailedId);
-		if (!isRetryLanded && timeUntil > FADE_WINDOW) continue;
+		const alpha = Math.max(0, 1 - (node.dateMs - sim.time) / FADE_WINDOW_MS);
+		if (alpha <= 0) continue;
 
-		const fadeAlpha = isRetryLanded ? 1 : 1 - timeUntil / FADE_WINDOW;
 		const [x, y] = angToXY(node.angle);
-		const hovered = fadeAlpha > 0.15 && mouse !== null && Math.hypot(mouse.x - x, mouse.y - y) < 10;
+		const hovered = alpha > 0.15 && mouse !== null && Math.hypot(mouse.x - x, mouse.y - y) < 10;
 		if (hovered) hoveredNode = node;
+		const isRetry = node.prevFailedId !== null;
 
-		ctx.globalAlpha = fadeAlpha;
+		ctx.globalAlpha = alpha;
 		ctx.beginPath();
 		ctx.arc(x, y, 4, 0, Math.PI * 2);
-		ctx.fillStyle = isRetryLanded
+		ctx.fillStyle = isRetry
 			? (hovered ? "#f87171" : "rgba(239, 68, 68, 0.55)")
 			: (hovered ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.40)");
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 		ctx.globalAlpha = 1;
 	}
 
-	// Arc particles — slide along the circle ring
+	// Arc particles — alpha uses the same window rule, but keyed on the particle's
+	// interpolated date as it travels (startMs → targetMs), so it fades while moving.
 	for (const p of sim.particles) {
 		if (p.phase !== "arc") continue;
+		const raw = Math.min(p.t / p.duration, 1);
+		const currentDateMs = p.startMs + (p.targetMs - p.startMs) * raw;
+		const a = Math.max(0, 1 - (currentDateMs - sim.time) / FADE_WINDOW_MS);
+		if (a <= 0) continue;
 		const [x, y] = angToXY(p.angle);
-		const a = Math.max(0, Math.min(1, p.alpha));
 		ctx.globalAlpha = a;
 		ctx.beginPath();
 		ctx.arc(x, y, 4, 0, Math.PI * 2);
 		ctx.fillStyle = p.color === "#f87171" ? "rgba(239, 68, 68, 0.55)" : p.color;
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 		ctx.globalAlpha = 1;
 	}
 
@@ -107,30 +116,26 @@ function drawFrame(
 		drawGlowAt(ctx, p.gx, p.gy, p.color, p.alpha, p.gr);
 	}
 
-	// Clock hand — simple line from center to circle edge
-	const [hx, hy] = angToXY(handAngle, R);
-	ctx.beginPath();
-	ctx.moveTo(CX, CY);
-	ctx.lineTo(hx, hy);
-	ctx.strokeStyle = "rgba(0,0,0,0.80)";
-	ctx.lineWidth = 1.5;
+	// Clock hand — clean stroke, floating above center text
+	const HAND_INNER = 44;
+	const [hx, hy] = angToXY(handAngle, R - 1);
+	const [hix, hiy] = angToXY(handAngle, HAND_INNER);
 	ctx.lineCap = "round";
-	ctx.stroke();
-
-	// Center pivot
 	ctx.beginPath();
-	ctx.arc(CX, CY, 3, 0, Math.PI * 2);
-	ctx.fillStyle = "rgba(0,0,0,0.75)";
-	ctx.fill();
+	ctx.moveTo(hix, hiy);
+	ctx.lineTo(hx, hy);
+	ctx.strokeStyle = TRACK_COLOR;
+	ctx.lineWidth = TRACK_WIDTH;
+	ctx.stroke();
 
 	// Center date
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
 	ctx.font = "bold 24px monospace";
-	ctx.fillStyle = "rgba(0,0,0,0.40)";
+	ctx.fillStyle = "rgba(0,0,0,0.52)";
 	ctx.fillText(String(simDate.getFullYear()), CX, CY - 8);
 	ctx.font = "10px monospace";
-	ctx.fillStyle = "rgba(0,0,0,0.28)";
+	ctx.fillStyle = "rgba(0,0,0,0.36)";
 	ctx.fillText(simDate.toLocaleString("en", { month: "short" }).toUpperCase(), CX, CY + 13);
 
 	// Tooltip
@@ -170,7 +175,20 @@ interface Props {
 
 export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Props) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const wrapperRef = useRef<HTMLDivElement>(null);
 	const mouseRef = useRef<{ x: number; y: number } | null>(null);
+	const [scale, setScale] = useState(1);
+
+	useEffect(() => {
+		const wrapper = wrapperRef.current;
+		if (!wrapper) return;
+		const observer = new ResizeObserver(([entry]) => {
+			const available = entry.contentRect.width;
+			setScale(available > 0 ? Math.min(1, available / W) : 1);
+		});
+		observer.observe(wrapper);
+		return () => observer.disconnect();
+	}, []);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -223,8 +241,17 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 
 					if (node.passed) {
 						sim.particles.push({
-							uid, phase: "glow",
+							uid, phase: "glow", duration: GLOW_DUR,
 							color: "#4ade80", alpha: 1, t: 0,
+							angle: node.angle, startAngle: node.angle, travelDist: 0,
+							targetAngle: null, targetId: null,
+							gx: ex, gy: ey, gr: 5,
+							startMs: node.dateMs, targetMs: node.dateMs,
+						});
+					} else if (!node.nextId) {
+						sim.particles.push({
+							uid, phase: "glow", duration: GLOW_DUR,
+							color: "#f87171", alpha: 1, t: 0,
 							angle: node.angle, startAngle: node.angle, travelDist: 0,
 							targetAngle: null, targetId: null,
 							gx: ex, gy: ey, gr: 5,
@@ -232,11 +259,18 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 						});
 					} else {
 						const targetAngle = nextNode?.angle ?? null;
-						const travelDist = targetAngle !== null
-							? cwDist(node.angle, targetAngle)
+						const gapMs = nextNode !== undefined ? nextNode.dateMs - node.dateMs : 0;
+						const fullLoops = nextNode !== undefined ? Math.floor(gapMs / YEAR_MS) : 0;
+					// cwDist returns 2π for identical angles (same day-of-year).
+					// When fullLoops > 0 those revolutions already cover that, so collapse the extra arc to 0.
+					const rawArcDist = targetAngle !== null ? cwDist(node.angle, targetAngle) : Math.PI * 2;
+					const arcDist = fullLoops > 0 && rawArcDist > Math.PI * 2 - 0.1 ? 0 : rawArcDist;
+					const travelDist = targetAngle !== null
+						? fullLoops * Math.PI * 2 + arcDist
 							: Math.PI * 2;
+						const duration = (fullLoops + 1) * ARC_DURATION;
 						sim.particles.push({
-							uid, phase: "arc",
+							uid, phase: "arc", duration,
 							color: "#f87171", alpha: 1, t: 0,
 							angle: node.angle, startAngle: node.angle, travelDist,
 							targetAngle, targetId: node.nextId,
@@ -266,5 +300,16 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 		};
 	}, [nodes, byId, simRef, simEnd, reset]);
 
-	return <canvas ref={canvasRef} style={{ display: "block" }} />;
+	return (
+		<div ref={wrapperRef} style={{ width: "100%", maxWidth: W, height: H * scale, overflow: "hidden", marginLeft: "auto", marginRight: "auto" }}>
+			<canvas
+				ref={canvasRef}
+				style={{
+					display: "block",
+					transformOrigin: "top left",
+					transform: scale < 1 ? `scale(${scale})` : undefined,
+				}}
+			/>
+		</div>
+	);
 }
