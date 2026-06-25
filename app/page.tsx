@@ -8,6 +8,13 @@ export default function Home() {
 			<GameOfLifeBg />
 
 			<section className="w-full border-y border-border bg-card/80 relative">
+				<a
+					href="/fun"
+					className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6 inline-flex items-center gap-1.5 rounded-full border border-border/90 bg-background/90 px-3 py-1 text-[0.7rem] font-mono uppercase tracking-[0.14em] text-foreground shadow-sm transition-colors hover:border-accent hover:text-accent"
+				>
+					<span>Fun</span>
+					<span aria-hidden="true" className="text-xs">↗</span>
+				</a>
 				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted">Portfolio</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">

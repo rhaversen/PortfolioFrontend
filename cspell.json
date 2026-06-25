@@ -17,7 +17,9 @@
         "tsconfig.json",
         "**/*.bat",
         "coverage/**",
-        "tsconfig.tsbuildinfo"
+        "tsconfig.tsbuildinfo",
+        "**/projects/sampleData.ts",
+        "**/exam-ping-pong/parser.ts"
     ],
     "ignoreWords": [
         "argocd",
@@ -58,6 +60,9 @@
         "undertested",
         "versen",
         "frontends",
-        "livez"
+        "livez",
+        "ECTS",
+        "ects",
+        "STADS"
     ]
 }
