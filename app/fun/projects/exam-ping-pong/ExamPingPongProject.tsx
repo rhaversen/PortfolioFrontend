@@ -78,25 +78,36 @@ export default function ExamPingPongProject() {
 				) : (
 					<div className="max-h-56 overflow-auto bg-background/40">
 						<table className="w-full table-fixed border-collapse text-sm">
+							<colgroup>
+								<col width="50" />
+								<col width="40" />
+								<col width="15" />
+								<col width="15" />
+								<col width="20" />
+								<col width="20" />
+							</colgroup>
 							<thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
 								<tr className="text-left">
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Course</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Date</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Grade</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">ECTS Grade</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">ECTS</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Result</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Course</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Date</th>
+									<th colSpan={2} className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Grade</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">ECTS</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Pass</th>
 								</tr>
 							</thead>
 							<tbody>
 								{parsed.records.map((record, index) => (
 									<tr key={`${record.courseName}-${record.date}-${index}`}>
-										<td className="border border-border px-2 py-1.5 break-words">{record.courseName}</td>
-										<td className="border border-border px-2 py-1.5 break-words">{record.date}</td>
-										<td className="border border-border px-2 py-1.5 break-words">{record.grade}</td>
-										<td className="border border-border px-2 py-1.5 break-words">{record.ectsGrade ?? "-"}</td>
-										<td className="border border-border px-2 py-1.5 break-words">{record.ects.toFixed(1)}</td>
-										<td className="border border-border px-2 py-1.5 break-words">{record.passed ? "Passed" : "Failed"}</td>
+										<td className="border border-border px-2 py-1.5 truncate">{record.courseName}</td>
+										<td className="border border-border px-2 py-1.5 truncate">{record.date}</td>
+										<td className="border border-border px-2 py-1.5 truncate">{record.grade}</td>
+										<td className="border border-border px-2 py-1.5 truncate">{record.ectsGrade ?? "-"}</td>
+										<td className="border border-border px-2 py-1.5 truncate">{record.ects.toFixed(1)}</td>
+										<td className="border border-border px-2 py-1.5 text-center">
+											{record.passed
+												? <span className="text-green-500">✓</span>
+												: <span className="text-red-400">✗</span>}
+										</td>
 									</tr>
 								))}
 							</tbody>
