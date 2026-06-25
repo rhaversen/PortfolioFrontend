@@ -1,8 +1,16 @@
 import AlcoholCheapskateProject from "./alcohol-cheapskate/AlcoholCheapskateProject";
 import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
+import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
+	{
+		id: "llm-brainwashing",
+		title: "LLM Brainwashing",
+		summary: "Force assistant-style continuation from user-written text.",
+		stack: ["LLM Prompting", "Streaming", "UX Experiments"],
+		Component: LlmBrainwashingProject,
+	},
 	{
 		id: "alcohol-cheapskate",
 		title: "Alcohol Cheapskate",
