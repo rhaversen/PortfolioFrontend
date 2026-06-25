@@ -27,6 +27,7 @@ export interface Particle {
 	color: string;
 	alpha: number;
 	t: number;
+	duration: number;
 	// arc movement (circle)
 	angle: number;
 	startAngle: number;
@@ -65,14 +66,17 @@ export function circleAngle(day: number): number {
 }
 
 export function msToAngle(ms: number): number {
-	return circleAngle(dayOfYear(new Date(ms)));
+	const d = new Date(ms);
+	const startOfYear = new Date(d.getFullYear(), 0, 1).getTime();
+	const fractionalDay = (ms - startOfYear) / 86_400_000 + 1;
+	return circleAngle(fractionalDay);
 }
 
 // Clockwise angular distance from → to, always in (0, 2π].
-// Returns 2π when positions are identical (same day-of-year, different year).
+// Returns 2π only when the angles are exactly equal (same day-of-year, different year).
 export function cwDist(from: number, to: number): number {
 	const d = ((to - from) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-	return d < 0.05 ? Math.PI * 2 : d;
+	return d < 1e-9 ? Math.PI * 2 : d;
 }
 
 export function buildNodes(records: ParsedExamRecord[]): ExamNode[] {
@@ -113,7 +117,7 @@ export function tickParticle(p: Particle, dt: number): boolean {
 	p.t += dt;
 
 	if (p.phase === "arc") {
-		const raw = Math.min(p.t / ARC_DURATION, 1);
+		const raw = Math.min(p.t / p.duration, 1);
 		// Cubic ease-out: starts fast, decelerates to destination
 		const eased = 1 - Math.pow(1 - raw, 3);
 		p.angle = p.startAngle + p.travelDist * eased;
@@ -124,7 +128,7 @@ export function tickParticle(p: Particle, dt: number): boolean {
 	}
 
 	if (p.phase === "glow") {
-		const t = Math.min(p.t / GLOW_DUR, 1);
+		const t = Math.min(p.t / p.duration, 1);
 		p.gr = 5 + t * 12;
 		p.alpha = t < 0.2 ? 1.0 : Math.max(0, 1 - (t - 0.2) / 0.8);
 		return t >= 1;

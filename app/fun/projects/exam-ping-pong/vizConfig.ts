@@ -1,12 +1,15 @@
 // Circle canvas dimensions
-export const CX = 240;
-export const CY = 255;
-export const R = 172;
-export const W = 480;
-export const H = 510;
+export const CX = 220;
+export const CY = 240;
+export const R = 200;
+export const W = 440;
+export const H =470;
 
 // Timeline canvas height
 export const TL_H = 88;
+
+// How far ahead exam dots start fading in (11 months)
+export const FADE_WINDOW_MS = 365.25 * 24 * 3600 * 1000 * 11 / 12;
 
 // Month label data
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

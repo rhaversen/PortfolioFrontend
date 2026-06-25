@@ -92,7 +92,7 @@ export default function Home() {
 						color="#3b82f6"
 						url="kantine.nyskivehus.dk"
 						github="https://github.com/rhaversen/ExsysBackend"
-						stack={["TypeScript", "Express 5", "Next.js 16", "React 19", "MongoDB", "Mongoose 8", "Redis", "Socket.io", "Passport.js", "SumUp API", "Sentry", "Winston", "BetterStack", "Mocha", "Chai", "nyc", "Docker", "Kubernetes"]}
+						stack={["SumUp API", "Socket.io", "Redis", "Passport.js", "Sentry"]}
 					/>
 
 					<ProjectShowcase
@@ -100,8 +100,9 @@ export default function Home() {
 						title="Gaslight"
 						description="Competitive programming platform where submitted JavaScript strategies play automated tournaments against each other."
 						color="#f97316"
+						url="gaslight.fun"
 						github="https://github.com/rhaversen/GaslightBackend"
-						stack={["TypeScript", "Express 5", "Next.js 16", "React 19", "MongoDB", "Redis", "Socket.io", "isolated-vm", "esbuild", "esprima", "Monaco Editor", "Shiki", "Three.js", "Mocha", "Chai", "nyc", "Docker", "Kubernetes"]}
+						stack={["isolated-vm", "esbuild", "esprima", "Monaco Editor", "Three.js"]}
 					/>
 
 					<ProjectShowcase
@@ -110,7 +111,7 @@ export default function Home() {
 						description="AI agent that modifies its own source code, opens PRs, waits for CI, and merges — changing itself each cycle."
 						color="#eab308"
 						github="https://github.com/rhaversen/SeedGPT"
-						stack={["TypeScript", "Node.js", "Anthropic Claude", "MongoDB", "Mongoose 8", "simple-git", "Octokit", "Jest", "Docker", "Kubernetes", "ArgoCD"]}
+						stack={["Anthropic Claude", "Multi-Agent Pipeline", "Octokit", "ArgoCD", "simple-git"]}
 					/>
 
 					<ProjectShowcase
@@ -118,8 +119,9 @@ export default function Home() {
 						title="SeedWatch"
 						description="Observability dashboard for SeedGPT. Inspect every LLM call with token counts, costs, and cache statistics."
 						color="#84cc16"
+						url="seedwatch.net"
 						github="https://github.com/rhaversen/seedwatch"
-						stack={["TypeScript", "Next.js 16", "React 19", "MongoDB", "Mongoose 9", "Tailwind CSS"]}
+						stack={["Prompt Cost Breakdown", "Cache Hit Tracking", "Per-Phase Inspection", "MongoDB"]}
 					/>
 
 					<ProjectShowcase
@@ -129,7 +131,7 @@ export default function Home() {
 						color="#22c55e"
 						url="life-stats.net"
 						github="https://github.com/rhaversen/LifeTrackerBackend"
-						stack={["TypeScript", "Express 5", "Next.js 16", "React 19", "MongoDB", "Mongoose 8", "Passport.js", "Nodemailer", "Chart.js", "date-fns", "Sentry", "Winston", "BetterStack", "Mocha", "Docker", "Kubernetes"]}
+						stack={["Chart.js", "Passport.js", "Nodemailer", "Sentry"]}
 					/>
 
 					<ProjectShowcase
@@ -139,7 +141,7 @@ export default function Home() {
 						color="#a855f7"
 						url="raindate.net"
 						github="https://github.com/rhaversen/GroupSchedulerBackend"
-						stack={["TypeScript", "Express 5", "Next.js 16", "React 19", "MongoDB", "Mongoose 8", "Redis", "Socket.io", "Passport.js", "Nodemailer", "dayjs", "Sentry", "Winston", "BetterStack", "Mocha", "Docker", "Kubernetes"]}
+						stack={["Socket.io", "Redis", "Passport.js", "Nodemailer"]}
 					/>
 
 					<ProjectShowcase
@@ -148,7 +150,7 @@ export default function Home() {
 						description="C++ tool that generates and classifies Conway's Game of Life patterns as still lifes, oscillators, or spaceships."
 						color="#06b6d4"
 						github="https://github.com/rhaversen/GOL"
-						stack={["C++", "MSVC", "Python", "NumPy", "Matplotlib", "Multithreading", "Floyd's Algorithm", "Bit Manipulation"]}
+						stack={["C++", "Floyd's Cycle Detection", "Bit-Packed Grid", "Canonical Hashing", "Multithreading"]}
 					/>
 
 					<ProjectShowcase
@@ -157,7 +159,7 @@ export default function Home() {
 						description="Genetic algorithm that evolves strategies for a Danish dice game across a population of 1000 variations."
 						color="#ec4899"
 						github="https://github.com/rhaversen/Diecup-2"
-						stack={["Java", "Genetic Algorithm", "Common Random Numbers", "Multithreading", "Python", "Statistics", "Multi-Objective Optimization"]}
+						stack={["Java", "Common Random Numbers", "Multi-Objective Fitness", "Adaptive Mutation", "Statistical Testing"]}
 					/>
 				</div>
 				</section>
