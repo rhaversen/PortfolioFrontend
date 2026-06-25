@@ -60,7 +60,7 @@ export default function FunPage() {
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+			<div className="max-w-4xl mx-auto px-6 py-5 sm:py-10">
 					<Link
 						href="/"
 						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90 decoration-transparent transition-colors duration-150 hover:decoration-current"
@@ -79,8 +79,8 @@ export default function FunPage() {
 				</div>
 			</section>
 
-			<main className="max-w-4xl mx-auto px-6 py-10 relative">
-				<div className="w-full border border-border bg-card/80 p-5 sm:p-6">
+			<main className="max-w-4xl mx-auto sm:px-6 py-10 relative">
+				<div className="w-full border-y sm:border border-border bg-card/80 p-5 sm:p-6">
 					{hasResolvedInitialProject ? (
 						<article>
 							<div className="flex items-start justify-between gap-4">

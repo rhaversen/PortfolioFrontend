@@ -175,7 +175,7 @@ export default function SentientUselessBoxProject() {
 
 			<div
 				ref={scrollRef}
-				className="h-128 overflow-y-auto border border-border divide-y divide-border/40"
+				className="h-64 sm:h-96 overflow-y-auto border border-border divide-y divide-border/40"
 			>
 				{blocks.length === 0 ? (
 					<div className="flex items-center justify-center h-full">
