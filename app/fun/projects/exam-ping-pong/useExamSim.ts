@@ -27,6 +27,7 @@ export interface Particle {
 	color: string;
 	alpha: number;
 	t: number;
+	duration: number;
 	// arc movement (circle)
 	angle: number;
 	startAngle: number;
@@ -113,7 +114,7 @@ export function tickParticle(p: Particle, dt: number): boolean {
 	p.t += dt;
 
 	if (p.phase === "arc") {
-		const raw = Math.min(p.t / ARC_DURATION, 1);
+		const raw = Math.min(p.t / p.duration, 1);
 		// Cubic ease-out: starts fast, decelerates to destination
 		const eased = 1 - Math.pow(1 - raw, 3);
 		p.angle = p.startAngle + p.travelDist * eased;
@@ -124,7 +125,7 @@ export function tickParticle(p: Particle, dt: number): boolean {
 	}
 
 	if (p.phase === "glow") {
-		const t = Math.min(p.t / GLOW_DUR, 1);
+		const t = Math.min(p.t / p.duration, 1);
 		p.gr = 5 + t * 12;
 		p.alpha = t < 0.2 ? 1.0 : Math.max(0, 1 - (t - 0.2) / 0.8);
 		return t >= 1;

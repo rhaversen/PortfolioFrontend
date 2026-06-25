@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
 	type ExamNode, type SimState,
-	SIM_SPEED, YEAR_MS,
+	SIM_SPEED, YEAR_MS, ARC_DURATION, GLOW_DUR,
 	circleAngle, cwDist, msToAngle, tickParticle,
 } from "./useExamSim";
-import { CX, CY, R, W, H, MONTHS, MONTH_DAY_1, angToXY } from "./vizConfig";
+import { CX, CY, R, W, H, MONTHS, MONTH_DAY_1, FADE_WINDOW_MS, angToXY } from "./vizConfig";
 import { drawGlowAt } from "./drawUtils";
 
 function drawFrame(
@@ -58,10 +58,8 @@ function drawFrame(
 	ctx.fillStyle = "rgba(30, 100, 180, 0.65)";
 	ctx.fillText("WINTER", CX, CY + R + 22);
 
-	// Exam dots — fade in over the 6 months before the exam date.
-	// Retry exams (prevFailedId set) are invisible until their predecessor fires;
-	// the arc particle traveling to them IS their representation until it lands.
-	const FADE_WINDOW = YEAR_MS / 2;
+	// Universal visibility rule: alpha = clamp(0,1, 1 - (examDateMs - sim.time) / FADE_WINDOW_MS)
+	// Dots and arcs both use this — no special cases.
 	let hoveredNode: ExamNode | null = null;
 	for (const node of nodes) {
 		if (sim.fired.has(node.id)) continue;
@@ -69,30 +67,33 @@ function drawFrame(
 		if (node.dateMs <= sim.time) continue;
 		if (node.prevFailedId !== null && !sim.fired.has(node.prevFailedId)) continue;
 
-		const timeUntil = node.dateMs - sim.time;
-		const isRetryLanded = node.prevFailedId !== null && sim.fired.has(node.prevFailedId);
-		if (!isRetryLanded && timeUntil > FADE_WINDOW) continue;
+		const alpha = Math.max(0, 1 - (node.dateMs - sim.time) / FADE_WINDOW_MS);
+		if (alpha <= 0) continue;
 
-		const fadeAlpha = isRetryLanded ? 1 : 1 - timeUntil / FADE_WINDOW;
 		const [x, y] = angToXY(node.angle);
-		const hovered = fadeAlpha > 0.15 && mouse !== null && Math.hypot(mouse.x - x, mouse.y - y) < 10;
+		const hovered = alpha > 0.15 && mouse !== null && Math.hypot(mouse.x - x, mouse.y - y) < 10;
 		if (hovered) hoveredNode = node;
+		const isRetry = node.prevFailedId !== null;
 
-		ctx.globalAlpha = fadeAlpha;
+		ctx.globalAlpha = alpha;
 		ctx.beginPath();
 		ctx.arc(x, y, 4, 0, Math.PI * 2);
-		ctx.fillStyle = isRetryLanded
+		ctx.fillStyle = isRetry
 			? (hovered ? "#f87171" : "rgba(239, 68, 68, 0.55)")
 			: (hovered ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.40)");
 		ctx.fill();
 		ctx.globalAlpha = 1;
 	}
 
-	// Arc particles — slide along the circle ring
+	// Arc particles — alpha uses the same window rule, but keyed on the particle's
+	// interpolated date as it travels (startMs → targetMs), so it fades while moving.
 	for (const p of sim.particles) {
 		if (p.phase !== "arc") continue;
+		const raw = Math.min(p.t / p.duration, 1);
+		const currentDateMs = p.startMs + (p.targetMs - p.startMs) * raw;
+		const a = Math.max(0, 1 - (currentDateMs - sim.time) / FADE_WINDOW_MS);
+		if (a <= 0) continue;
 		const [x, y] = angToXY(p.angle);
-		const a = Math.max(0, Math.min(1, p.alpha));
 		ctx.globalAlpha = a;
 		ctx.beginPath();
 		ctx.arc(x, y, 4, 0, Math.PI * 2);
@@ -236,8 +237,17 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 
 					if (node.passed) {
 						sim.particles.push({
-							uid, phase: "glow",
+							uid, phase: "glow", duration: GLOW_DUR,
 							color: "#4ade80", alpha: 1, t: 0,
+							angle: node.angle, startAngle: node.angle, travelDist: 0,
+							targetAngle: null, targetId: null,
+							gx: ex, gy: ey, gr: 5,
+							startMs: node.dateMs, targetMs: node.dateMs,
+						});
+					} else if (!node.nextId) {
+						sim.particles.push({
+							uid, phase: "glow", duration: GLOW_DUR,
+							color: "#f87171", alpha: 1, t: 0,
 							angle: node.angle, startAngle: node.angle, travelDist: 0,
 							targetAngle: null, targetId: null,
 							gx: ex, gy: ey, gr: 5,
@@ -245,11 +255,18 @@ export default function ExamClockViz({ nodes, byId, simRef, simEnd, reset }: Pro
 						});
 					} else {
 						const targetAngle = nextNode?.angle ?? null;
-						const travelDist = targetAngle !== null
-							? cwDist(node.angle, targetAngle)
+						const gapMs = nextNode !== undefined ? nextNode.dateMs - node.dateMs : 0;
+						const fullLoops = nextNode !== undefined ? Math.floor(gapMs / YEAR_MS) : 0;
+					// cwDist returns 2π for identical angles (same day-of-year).
+					// When fullLoops > 0 those revolutions already cover that, so collapse the extra arc to 0.
+					const rawArcDist = targetAngle !== null ? cwDist(node.angle, targetAngle) : Math.PI * 2;
+					const arcDist = fullLoops > 0 && rawArcDist > Math.PI * 2 - 0.1 ? 0 : rawArcDist;
+					const travelDist = targetAngle !== null
+						? fullLoops * Math.PI * 2 + arcDist
 							: Math.PI * 2;
+						const duration = (fullLoops + 1) * ARC_DURATION;
 						sim.particles.push({
-							uid, phase: "arc",
+							uid, phase: "arc", duration,
 							color: "#f87171", alpha: 1, t: 0,
 							angle: node.angle, startAngle: node.angle, travelDist,
 							targetAngle, targetId: node.nextId,
