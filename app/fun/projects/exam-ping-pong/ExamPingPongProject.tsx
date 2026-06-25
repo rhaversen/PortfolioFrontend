@@ -13,6 +13,11 @@ export default function ExamPingPongProject() {
 	const parsed = useMemo(() => parseExamResults(rawInput), [rawInput]);
 	const { nodes, byId, simRef, simStart, simEnd, reset } = useExamSim(parsed.records);
 
+	const handlePaste = async () => {
+		const text = await navigator.clipboard.readText();
+		setRawInput(text);
+	};
+
 	return (
 		<div className="space-y-5">
 			{nodes.length > 0 && (
@@ -52,6 +57,13 @@ export default function ExamPingPongProject() {
 					<p className="text-[0.68rem] font-mono uppercase tracking-widest text-muted">
 						{parsed.records.length} parsed / {parsed.skippedSegments} skipped
 					</p>
+					<button
+						type="button"
+						onClick={handlePaste}
+						className="border border-border px-3 py-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted hover:text-foreground hover:border-foreground/40 transition-colors"
+					>
+						Paste
+					</button>
 				</div>
 
 				<textarea
