@@ -98,7 +98,7 @@ export default function FunPage() {
 									</span>
 								))}
 							</div>
-							<div className="mt-6 border border-border bg-background/30 p-4 sm:p-5">
+						<div className="mt-6">
 								<ActiveProjectComponent />
 							</div>
 						</article>
