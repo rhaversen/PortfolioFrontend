@@ -12,6 +12,8 @@ export default function LlmBrainwashingProject() {
 	const [prefillInput, setPrefillInput] = useState('')
 	const [generated, setGenerated] = useState('')
 	const [isStreaming, setIsStreaming] = useState(false)
+	const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
+	const [copied, setCopied] = useState(false)
 	const socketRef = useRef<Socket | null>(null)
 
 	useEffect(() => {
@@ -67,11 +69,14 @@ export default function LlmBrainwashingProject() {
 		setUserInput(preset.userMessage)
 		setPrefillInput(preset.assistantPrefill)
 		setGenerated('')
+		setSelectedPreset(index)
 	}
 
 	function copyResponse() {
 		const full = (prefillInput.trimEnd() ? prefillInput.trimEnd() + ' ' : '') + generated
 		navigator.clipboard.writeText(full)
+		setCopied(true)
+		setTimeout(() => setCopied(false), 1000)
 	}
 
 	return (
@@ -84,7 +89,7 @@ export default function LlmBrainwashingProject() {
 						key={preset.label}
 						onClick={() => applyPreset(i)}
 						disabled={isStreaming}
-						className="border border-border px-2 py-0.5 text-[0.65rem] font-mono text-foreground/70 hover:border-foreground/40 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
 					>
 						{preset.label}
 					</button>
@@ -104,7 +109,7 @@ export default function LlmBrainwashingProject() {
 			<div className="px-4 pt-4 pb-2 flex justify-end items-end gap-2">
 				<textarea
 					value={userInput}
-					onChange={(e) => setUserInput(e.target.value)}
+					onChange={(e) => { setUserInput(e.target.value) }}
 					onKeyDown={handleKeyDown}
 					placeholder="You: type your message here..."
 					disabled={isStreaming}
@@ -140,20 +145,20 @@ export default function LlmBrainwashingProject() {
 						</div>
 					)}
 				</div>
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-2 w-50">
 					<button
 						onClick={send}
 						disabled={!userInput.trim() || isStreaming}
-						className="shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
+						className="cursor-pointer shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
 					>
 						Send Message
 					</button>
 					<button
 						onClick={copyResponse}
-						disabled={!generated}
-						className="shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
+						disabled={!generated || isStreaming}
+						className={`cursor-pointer shrink-0 border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-150 ${copied ? 'border-blue-500 text-blue-400' : 'border-border text-foreground hover:border-foreground/50'}`}
 					>
-						Copy Response
+						{copied ? 'Copied!' : 'Copy Response'}
 					</button>
 				</div>
 			</div>
