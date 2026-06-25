@@ -38,6 +38,17 @@ body {
   background: rgba(99, 102, 241, 0.3);
 }
 
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes letterfade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-letterfade { animation: letterfade 0.010s ease-out both; }
+
 .markdown-body { line-height: 1.65; color: var(--foreground); }
 .markdown-body p { margin: 0.4em 0; }
 .markdown-body p:first-child { margin-top: 0; }
