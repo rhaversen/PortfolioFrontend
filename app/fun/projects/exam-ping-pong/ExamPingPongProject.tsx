@@ -86,7 +86,7 @@ export default function ExamPingPongProject() {
 								<col width="20" />
 								<col width="20" />
 							</colgroup>
-							<thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+							<thead className="sticky -top-px z-10 bg-background/95 backdrop-blur-sm">
 								<tr className="text-left">
 									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Course</th>
 									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Date</th>
