@@ -70,10 +70,10 @@ export function msToAngle(ms: number): number {
 }
 
 // Clockwise angular distance from → to, always in (0, 2π].
-// Returns 2π when positions are identical (same day-of-year, different year).
+// Returns 2π only when the angles are exactly equal (same day-of-year, different year).
 export function cwDist(from: number, to: number): number {
 	const d = ((to - from) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-	return d < 0.05 ? Math.PI * 2 : d;
+	return d < 1e-9 ? Math.PI * 2 : d;
 }
 
 export function buildNodes(records: ParsedExamRecord[]): ExamNode[] {
