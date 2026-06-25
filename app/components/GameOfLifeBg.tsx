@@ -29,7 +29,7 @@ const LWSS_PATTERNS: ReadonlyArray<ReadonlyArray<[number, number]>> = [
 	[[0, 0], [2, 0], [3, 1], [3, 2], [0, 3], [3, 3], [1, 4], [2, 4], [3, 4]], // S
 	[[0, 0], [1, 0], [2, 0], [0, 1], [3, 1], [0, 2], [0, 3], [1, 4], [3, 4]], // N
 ];
-const LWSS_CHANCE = 0.1;
+const LWSS_CHANCE = 0.05;
 
 // Derived constants
 const CELL_RENDER_SIZE_PX = CELL_SIZE_PX - CELL_INSET_PX * 2; // Rendered square size within the cell
