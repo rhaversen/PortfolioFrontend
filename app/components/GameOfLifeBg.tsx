@@ -273,7 +273,7 @@ export default function GameOfLifeBg() {
 							</div>
 							<button
 								onClick={handleNewGame}
-								className="w-full border border-border/20 text-muted py-0.5 uppercase tracking-widest text-[0.6rem]"
+								className="w-full border border-border/20 text-muted py-0.5 uppercase tracking-widest text-[0.6rem] cursor-pointer hover:text-foreground/70 hover:border-border/40 transition-colors"
 							>
 								New Game
 							</button>
