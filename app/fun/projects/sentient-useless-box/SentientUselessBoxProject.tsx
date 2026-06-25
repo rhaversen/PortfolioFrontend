@@ -124,10 +124,6 @@ export default function SentientUselessBoxProject() {
 
 	return (
 		<div className="space-y-6">
-			<p className="text-sm leading-relaxed text-foreground/80 max-w-2xl">
-				A useless box — but the AI inside has opinions about what you&apos;re doing to it.
-			</p>
-
 			{systemPrompt !== null && (
 				<details className="border border-border/40 group">
 					<summary className="cursor-pointer px-4 py-2.5 flex items-center justify-between text-[0.6rem] font-mono uppercase tracking-widest text-muted select-none hover:text-foreground/60 transition-colors list-none">

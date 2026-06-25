@@ -77,10 +77,6 @@ export default function AlcoholCheapskateProject() {
 
 	return (
 		<div className="space-y-5">
-			<p className="text-sm leading-relaxed text-foreground/90 max-w-3xl">
-				Enter ABV, price, and total liters for each beverage. The table compares cost per liter of pure ethanol so you can immediately see which option gives the best value.
-			</p>
-
 			<div className="space-y-3">
 				<div className="flex justify-end">
 					<button
