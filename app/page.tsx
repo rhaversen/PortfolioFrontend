@@ -100,6 +100,7 @@ export default function Home() {
 						title="Gaslight"
 						description="Competitive programming platform where submitted JavaScript strategies play automated tournaments against each other."
 						color="#f97316"
+						url="gaslight.fun"
 						github="https://github.com/rhaversen/GaslightBackend"
 						stack={["isolated-vm", "esbuild", "esprima", "Monaco Editor", "Three.js"]}
 					/>
@@ -118,6 +119,7 @@ export default function Home() {
 						title="SeedWatch"
 						description="Observability dashboard for SeedGPT. Inspect every LLM call with token counts, costs, and cache statistics."
 						color="#84cc16"
+						url="seedwatch.net"
 						github="https://github.com/rhaversen/seedwatch"
 						stack={["Prompt Cost Breakdown", "Cache Hit Tracking", "Per-Phase Inspection", "MongoDB"]}
 					/>
