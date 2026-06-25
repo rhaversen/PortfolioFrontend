@@ -19,7 +19,8 @@
         "coverage/**",
         "tsconfig.tsbuildinfo",
         "**/projects/sampleData.ts",
-        "**/exam-ping-pong/parser.ts"
+        "**/exam-ping-pong/parser.ts",
+        "**/app/globals.css"
     ],
     "ignoreWords": [
         "argocd",
@@ -64,6 +65,7 @@
         "ECTS",
         "ects",
         "STADS",
-        "LWSS"
+        "LWSS",
+        "letterfade"
     ]
 }
