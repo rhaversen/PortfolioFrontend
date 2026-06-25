@@ -88,17 +88,6 @@ export default function FunPage() {
 								<h2 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">{activeProject.title}</h2>
 							</div>
 							<p className="mt-4 max-w-3xl text-sm leading-relaxed text-foreground/90">{activeProject.summary}</p>
-							<p className="mt-5 text-xs font-mono uppercase tracking-[0.14em] text-muted">Stack</p>
-							<div className="mt-2 flex flex-wrap gap-2">
-								{activeProject.stack.map((item) => (
-									<span
-										key={item}
-										className="text-[0.68rem] font-mono uppercase tracking-widest border border-border px-2 py-1 text-foreground/90"
-									>
-										{item}
-									</span>
-								))}
-							</div>
 						<div className="mt-6">
 								<ActiveProjectComponent />
 							</div>
