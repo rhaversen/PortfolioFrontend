@@ -64,27 +64,27 @@ export default function ExamPingPongProject() {
 				{parsed.records.length === 0 ? (
 					<p className="text-sm text-foreground/80">No exam entries detected yet. Paste exam text above to parse.</p>
 				) : (
-					<div className="max-h-56 overflow-auto bg-background/40 space-y-3">
+					<div className="max-h-56 overflow-auto bg-background/40">
 						<table className="w-full table-fixed border-collapse text-sm">
-							<thead>
+							<thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
 								<tr className="text-left">
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Course</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Date</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Grade</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">ECTS Grade</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">ECTS</th>
-									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Result</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Course</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Date</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Grade</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">ECTS Grade</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">ECTS</th>
+									<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted break-words">Result</th>
 								</tr>
 							</thead>
 							<tbody>
 								{parsed.records.map((record, index) => (
 									<tr key={`${record.courseName}-${record.date}-${index}`}>
-										<td className="border border-border px-2 py-1.5">{record.courseName}</td>
-										<td className="border border-border px-2 py-1.5">{record.date}</td>
-										<td className="border border-border px-2 py-1.5">{record.grade}</td>
-										<td className="border border-border px-2 py-1.5">{record.ectsGrade ?? "-"}</td>
-										<td className="border border-border px-2 py-1.5">{record.ects.toFixed(1)}</td>
-										<td className="border border-border px-2 py-1.5">{record.passed ? "Passed" : "Failed"}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.courseName}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.date}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.grade}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.ectsGrade ?? "-"}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.ects.toFixed(1)}</td>
+										<td className="border border-border px-2 py-1.5 break-words">{record.passed ? "Passed" : "Failed"}</td>
 									</tr>
 								))}
 							</tbody>
