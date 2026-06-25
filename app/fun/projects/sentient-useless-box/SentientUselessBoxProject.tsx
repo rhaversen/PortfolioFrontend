@@ -37,12 +37,16 @@ export default function SentientUselessBoxProject() {
 	const pendingActionsRef = useRef<PendingAction[]>([])
 	const getId = () => String(idRef.current++)
 
+	const lastTimestampRef = useRef<number>(0)
+
 	function getTimestamp() {
-		const ms = Date.now() - sessionStartRef.current
+		const now = Date.now()
+		const ms = now - (lastTimestampRef.current || sessionStartRef.current)
+		lastTimestampRef.current = now
 		const totalSeconds = Math.floor(ms / 1000)
 		const minutes = Math.floor(totalSeconds / 60)
 		const seconds = totalSeconds % 60
-		return minutes === 0 ? `T+${seconds}s` : `T+${minutes}m ${seconds}s`
+		return minutes === 0 ? `+${seconds}s` : `+${minutes}m ${seconds}s`
 	}
 
 	const flushQueue = useCallback(() => {
@@ -110,8 +114,9 @@ export default function SentientUselessBoxProject() {
 			if (initialSentRef.current) return
 			initialSentRef.current = true
 			sessionStartRef.current = Date.now()
+			lastTimestampRef.current = Date.now()
 			setIsProcessing(true)
-			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'T+0s' }])
+			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 			socket.emit('box:trigger', { toggleState: false })
 		})
 
@@ -170,7 +175,8 @@ export default function SentientUselessBoxProject() {
 			drainIntervalRef.current = null
 		}
 		sessionStartRef.current = Date.now()
-		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'T+0s' }])
+		lastTimestampRef.current = Date.now()
+		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false })
 	}
@@ -179,6 +185,7 @@ export default function SentientUselessBoxProject() {
 		const newState = !switchOn
 		setSwitchOn(newState)
 		setIsProcessing(true)
+		const ts = getTimestamp()
 
 		setBlocks((prev) => {
 			const closed = prev.map((b) =>
@@ -190,7 +197,7 @@ export default function SentientUselessBoxProject() {
 					id: getId(),
 					kind: 'user' as const,
 					text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.',
-					timestamp: getTimestamp(),
+					timestamp: ts,
 				},
 			]
 		})
