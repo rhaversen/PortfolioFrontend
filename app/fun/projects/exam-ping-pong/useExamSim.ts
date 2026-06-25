@@ -66,7 +66,10 @@ export function circleAngle(day: number): number {
 }
 
 export function msToAngle(ms: number): number {
-	return circleAngle(dayOfYear(new Date(ms)));
+	const d = new Date(ms);
+	const startOfYear = new Date(d.getFullYear(), 0, 1).getTime();
+	const fractionalDay = (ms - startOfYear) / 86_400_000 + 1;
+	return circleAngle(fractionalDay);
 }
 
 // Clockwise angular distance from → to, always in (0, 2π].

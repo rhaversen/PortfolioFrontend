@@ -23,28 +23,30 @@ function drawFrame(
 	const simDate = new Date(sim.time);
 	const handAngle = msToAngle(sim.time);
 	const targeted = new Set(sim.particles.filter(p => p.targetId !== null).map(p => p.targetId as string));
+	const TRACK_COLOR = "rgba(0,0,0,0.25)";
+	const TRACK_WIDTH = 1.5;
 
 	// Circle
 	ctx.beginPath();
 	ctx.arc(CX, CY, R, 0, Math.PI * 2);
-	ctx.strokeStyle = "rgba(0,0,0,0.18)";
-	ctx.lineWidth = 1;
+	ctx.strokeStyle = TRACK_COLOR;
+	ctx.lineWidth = TRACK_WIDTH;
 	ctx.stroke();
 
 	// Month ticks + labels
 	for (let m = 0; m < 12; m++) {
 		const a = circleAngle(MONTH_DAY_1[m]);
-		const [ix, iy] = angToXY(a, R - 7);
+		const [ix, iy] = angToXY(a, R - 9);
 		const [ox, oy] = angToXY(a, R);
 		const [lx, ly] = angToXY(a, R + 16);
 		ctx.beginPath();
 		ctx.moveTo(ix, iy);
 		ctx.lineTo(ox, oy);
-		ctx.strokeStyle = "rgba(0,0,0,0.22)";
-		ctx.lineWidth = 1;
+		ctx.strokeStyle = TRACK_COLOR;
+		ctx.lineWidth = TRACK_WIDTH;
 		ctx.stroke();
 		ctx.font = "8px monospace";
-		ctx.fillStyle = "rgba(0,0,0,0.38)";
+		ctx.fillStyle = "rgba(0,0,0,0.42)";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillText(MONTHS[m], lx, ly);
@@ -52,10 +54,10 @@ function drawFrame(
 
 	// Season labels
 	ctx.textAlign = "center";
-	ctx.font = "bold 9px monospace";
-	ctx.fillStyle = "rgba(180, 120, 0, 0.70)";
+	ctx.font = "9px monospace";
+	ctx.fillStyle = "rgba(160, 100, 0, 0.52)";
 	ctx.fillText("SUMMER", CX, CY - R - 22);
-	ctx.fillStyle = "rgba(30, 100, 180, 0.65)";
+	ctx.fillStyle = "rgba(30, 90, 170, 0.48)";
 	ctx.fillText("WINTER", CX, CY + R + 22);
 
 	// Universal visibility rule: alpha = clamp(0,1, 1 - (examDateMs - sim.time) / FADE_WINDOW_MS)
@@ -82,6 +84,9 @@ function drawFrame(
 			? (hovered ? "#f87171" : "rgba(239, 68, 68, 0.55)")
 			: (hovered ? "rgba(0,0,0,0.80)" : "rgba(0,0,0,0.40)");
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 		ctx.globalAlpha = 1;
 	}
 
@@ -99,6 +104,9 @@ function drawFrame(
 		ctx.arc(x, y, 4, 0, Math.PI * 2);
 		ctx.fillStyle = p.color === "#f87171" ? "rgba(239, 68, 68, 0.55)" : p.color;
 		ctx.fill();
+		ctx.strokeStyle = "rgba(255,255,255,0.75)";
+		ctx.lineWidth = 1;
+		ctx.stroke();
 		ctx.globalAlpha = 1;
 	}
 
@@ -108,30 +116,26 @@ function drawFrame(
 		drawGlowAt(ctx, p.gx, p.gy, p.color, p.alpha, p.gr);
 	}
 
-	// Clock hand — simple line from center to circle edge
-	const [hx, hy] = angToXY(handAngle, R);
-	ctx.beginPath();
-	ctx.moveTo(CX, CY);
-	ctx.lineTo(hx, hy);
-	ctx.strokeStyle = "rgba(0,0,0,0.80)";
-	ctx.lineWidth = 1.5;
+	// Clock hand — clean stroke, floating above center text
+	const HAND_INNER = 44;
+	const [hx, hy] = angToXY(handAngle, R - 1);
+	const [hix, hiy] = angToXY(handAngle, HAND_INNER);
 	ctx.lineCap = "round";
-	ctx.stroke();
-
-	// Center pivot
 	ctx.beginPath();
-	ctx.arc(CX, CY, 3, 0, Math.PI * 2);
-	ctx.fillStyle = "rgba(0,0,0,0.75)";
-	ctx.fill();
+	ctx.moveTo(hix, hiy);
+	ctx.lineTo(hx, hy);
+	ctx.strokeStyle = TRACK_COLOR;
+	ctx.lineWidth = TRACK_WIDTH;
+	ctx.stroke();
 
 	// Center date
 	ctx.textAlign = "center";
 	ctx.textBaseline = "middle";
 	ctx.font = "bold 24px monospace";
-	ctx.fillStyle = "rgba(0,0,0,0.40)";
+	ctx.fillStyle = "rgba(0,0,0,0.52)";
 	ctx.fillText(String(simDate.getFullYear()), CX, CY - 8);
 	ctx.font = "10px monospace";
-	ctx.fillStyle = "rgba(0,0,0,0.28)";
+	ctx.fillStyle = "rgba(0,0,0,0.36)";
 	ctx.fillText(simDate.toLocaleString("en", { month: "short" }).toUpperCase(), CX, CY + 13);
 
 	// Tooltip
