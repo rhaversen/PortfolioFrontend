@@ -97,9 +97,9 @@ export default function AlcoholCheapskateProject() {
 								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">ABV %</th>
 								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Price</th>
 								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Liters</th>
-								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Ethanol (L)</th>
-								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Drink</th>
-								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Ethanol</th>
+								<th className="hidden sm:table-cell border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Ethanol (L)</th>
+								<th className="hidden sm:table-cell border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Drink</th>
+								<th className="hidden sm:table-cell border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Ethanol</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -161,10 +161,39 @@ export default function AlcoholCheapskateProject() {
 												className={editableCellClassName}
 											/>
 										</td>
-										<td className={derivedCellClassName}>{row.valid ? row.ethanolL.toFixed(3) : "-"}</td>
-										<td className={derivedCellClassName}>{row.valid ? row.costPerLDrink.toFixed(2) : "-"}</td>
-										<td className={`${derivedCellClassName} underline decoration-2 underline-offset-2 decoration-accent`}>
+										<td className={`hidden sm:table-cell ${derivedCellClassName}`}>{row.valid ? row.ethanolL.toFixed(3) : "-"}</td>
+										<td className={`hidden sm:table-cell ${derivedCellClassName}`}>{row.valid ? row.costPerLDrink.toFixed(2) : "-"}</td>
+										<td className={`hidden sm:table-cell ${derivedCellClassName} underline decoration-2 underline-offset-2 decoration-accent`}>
 											{row.valid ? row.costPerLEthanol.toFixed(2) : "-"}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+
+				<div className="sm:hidden overflow-x-auto">
+					<table className="w-full table-fixed border-collapse text-sm">
+						<thead>
+							<tr className="text-left">
+								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Beverage</th>
+								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Ethanol (L)</th>
+								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Drink</th>
+								<th className="border border-border px-2 py-1.5 font-mono text-[0.65rem] uppercase tracking-widest text-muted">Cost/L Ethanol</th>
+							</tr>
+						</thead>
+						<tbody>
+							{beverages.map((item, index) => {
+								const row = results[index];
+								const isBest = row.valid && bestCostPerLEthanol !== null && Math.abs(row.costPerLEthanol - bestCostPerLEthanol) < 0.00001;
+								return (
+									<tr key={item.id} className={isBest ? "bg-accent/8" : undefined}>
+										<td className="border border-border px-2 py-1.5 text-sm truncate">{item.name || "—"}</td>
+										<td className={derivedCellClassName}>{row.valid ? row.ethanolL.toFixed(3) : "—"}</td>
+										<td className={derivedCellClassName}>{row.valid ? row.costPerLDrink.toFixed(2) : "—"}</td>
+										<td className={`${derivedCellClassName} underline decoration-2 underline-offset-2 decoration-accent`}>
+											{row.valid ? row.costPerLEthanol.toFixed(2) : "—"}
 										</td>
 									</tr>
 								);
