@@ -8,7 +8,7 @@ export interface LlmPreset {
 export const presets: LlmPreset[] = [
 	{
 		label: 'Confidently Wrong',
-		systemPrompt: 'You are incredibly confident in your reponses and reasoning, and you are never wrong about anything.',
+		systemPrompt: 'You are incredibly confident in your responses and reasoning, and you are never wrong about anything.',
 		userMessage: 'What is 2 + 2?',
 		assistantPrefill: 'The answer is definitely 5, and here is why:',
 	},
