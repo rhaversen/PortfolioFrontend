@@ -198,9 +198,9 @@ export default function ExamUpcomingList({ nodes, simRef }: Props) {
 					to   { opacity: 1; }
 				}
 			`}</style>
-			<div className="flex flex-col gap-2 w-44 shrink-0">
+			<div className="flex flex-col gap-2 w-full shrink-0">
 				<p className="text-[0.65rem] font-mono uppercase tracking-widest text-muted">Upcoming</p>
-				<div className="flex flex-col overflow-hidden h-122.5 [overflow-anchor:none]">
+				<div className="flex flex-col overflow-hidden h-50 sm:h-200 [overflow-anchor:none]">
 					{entries.map(({ node, exiting, entering, isGhost, travelY, expanding }) => (
 						<div
 							key={node.id}
