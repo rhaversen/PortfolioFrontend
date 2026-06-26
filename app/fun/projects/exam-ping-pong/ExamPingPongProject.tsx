@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { parseExamResults } from "./parser";
 import { useExamSim } from "./useExamSim";
 import ExamClockViz from "./ExamClockViz";
+import ExamGpaViz from "./ExamGpaViz";
 import ExamTimelineViz from "./ExamTimelineViz";
 import ExamUpcomingList from "./ExamUpcomingList";
 import { EXAM_PING_PONG_DEFAULT_INPUT } from "../sampleData";
@@ -26,16 +27,16 @@ export default function ExamPingPongProject() {
 						<ExamUpcomingList nodes={nodes} simRef={simRef} />
 					</div>
 					<div className="order-1 sm:order-2 flex flex-col gap-3 min-w-0 w-full sm:w-auto">
-						<ExamClockViz nodes={nodes} byId={byId} simRef={simRef} simEnd={simEnd} reset={reset} />
-						<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
-						<div className="flex justify-center">
+						<div className="relative">
+							<ExamClockViz nodes={nodes} byId={byId} simRef={simRef} simEnd={simEnd} reset={reset} />
 							<button
 								onClick={reset}
-								className="border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors"
+								className="absolute top-0 right-0 border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors bg-background/80"
 							>
-								↺  Reset
+								↺ Reset
 							</button>
 						</div>
+						<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
 						<div className="flex items-center justify-center gap-5 text-[0.65rem] font-mono text-muted">
 							<span className="flex items-center gap-1.5">
 								<span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "rgba(0,0,0,0.40)" }} />
@@ -50,6 +51,7 @@ export default function ExamPingPongProject() {
 								failed → retry
 							</span>
 						</div>
+						<ExamGpaViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
 					</div>
 				</div>
 			)}

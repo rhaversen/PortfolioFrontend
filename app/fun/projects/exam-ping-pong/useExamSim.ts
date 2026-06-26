@@ -17,6 +17,17 @@ export interface ExamNode {
 	passed: boolean;
 	nextId: string | null;
 	prevFailedId: string | null;
+	grade: number;
+	ects: number;
+}
+
+export function gradeToNumber(grade: string): number {
+	const map: Record<string, number> = {
+		"12": 12, "10": 10, "7": 7, "4": 4, "02": 2, "00": 0, "-3": -3,
+		"A": 12, "B": 10, "C": 7, "D": 4, "E": 2,
+		"F": -3, "Fx": -3, "U": -3,
+	};
+	return map[grade] ?? 0;
 }
 
 export type ParticlePhase = "arc" | "glow";
@@ -91,6 +102,8 @@ export function buildNodes(records: ParsedExamRecord[]): ExamNode[] {
 			passed: rec.passed,
 			nextId: null,
 			prevFailedId: null,
+			grade: gradeToNumber(rec.grade),
+			ects: rec.ects,
 		};
 	});
 

@@ -8,6 +8,9 @@ export const H =470;
 // Timeline canvas height
 export const TL_H = 88;
 
+// GPA graph canvas height
+export const GPA_H = 220;
+
 // How far ahead exam dots start fading in (11 months)
 export const FADE_WINDOW_MS = 365.25 * 24 * 3600 * 1000 * 11 / 12;
 
