@@ -56,11 +56,8 @@ const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { k
 const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { kind: 'text' }> }) {
 	return (
 		<div className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
-			<div className="markdown-body">
+			<div className={`markdown-body${!block.done ? ' is-streaming' : ''}`}>
 				<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
-				{!block.done && (
-					<span className="inline-block w-1 h-[0.9em] bg-foreground/30 align-middle animate-pulse" />
-				)}
 			</div>
 		</div>
 	)
@@ -81,9 +78,8 @@ export default function SentientUselessBoxProject() {
 	const idRef = useRef(0)
 	const initialSentRef = useRef(false)
 	const sessionStartRef = useRef<number>(0)
-	const lastScrollDirectionRef = useRef<'down' | 'up' | null>(null)
+	const userScrolledUpRef = useRef(false)
 	const prevScrollTopRef = useRef(0)
-	const wasAtBottomRef = useRef(true)
 	const segQueueRef = useRef<QueueSegment[]>([])
 	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const pendingActionsRef = useRef<PendingAction[]>([])
@@ -182,8 +178,8 @@ export default function SentientUselessBoxProject() {
 			initialSentRef.current = true
 			sessionStartRef.current = Date.now()
 			lastTimestampRef.current = Date.now()
-			wasAtBottomRef.current = true
-			lastScrollDirectionRef.current = null
+			userScrolledUpRef.current = false
+			prevScrollTopRef.current = 0
 			setIsProcessing(true)
 			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 			socket.emit('box:trigger', { toggleState: false, systemPrompt: systemPromptRef.current })
@@ -236,8 +232,7 @@ export default function SentientUselessBoxProject() {
 		if (blocks.length === 0) { return }
 		const el = scrollRef.current
 		if (!el) { return }
-		const scrolledUp = lastScrollDirectionRef.current === 'up'
-		if (wasAtBottomRef.current && !scrolledUp) {
+		if (!userScrolledUpRef.current) {
 			el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
 		}
 	}, [blocks])
@@ -262,8 +257,8 @@ export default function SentientUselessBoxProject() {
 		const now = Date.now()
 		sessionStartRef.current = now
 		lastTimestampRef.current = now
-		wasAtBottomRef.current = true
-		lastScrollDirectionRef.current = null
+		userScrolledUpRef.current = false	
+		prevScrollTopRef.current = 0		
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt: preset.systemPrompt })
@@ -303,8 +298,8 @@ export default function SentientUselessBoxProject() {
 		}
 		sessionStartRef.current = Date.now()
 		lastTimestampRef.current = Date.now()
-		wasAtBottomRef.current = true
-		lastScrollDirectionRef.current = null
+		userScrolledUpRef.current = false
+		prevScrollTopRef.current = 0
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt })
@@ -430,16 +425,17 @@ export default function SentientUselessBoxProject() {
 					<p className={`text-base font-mono font-semibold tracking-widest uppercase transition-colors ${switchOn ? 'text-foreground' : 'text-foreground/40'}`}>
 						{switchOn ? 'On' : 'Off'}
 					</p>
-					{isProcessing && (
-						<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted animate-pulse mt-0.5">
-							processing
-						</p>
-					)}
-					{rateLimitExpiresAt !== null && retryCountdown > 0 && (
-						<p className="text-[0.6rem] font-mono uppercase tracking-widest text-amber-400 mt-0.5">
-							rate limited — {formatCountdown(retryCountdown)}
-						</p>
-					)}
+					<p className={`text-[0.6rem] font-mono uppercase tracking-widest mt-0.5 ${
+						rateLimitExpiresAt !== null && retryCountdown > 0
+							? 'text-amber-400'
+							: isProcessing
+								? 'text-muted animate-pulse'
+								: 'invisible'
+					}`}>
+						{rateLimitExpiresAt !== null && retryCountdown > 0
+							? `rate limited — ${formatCountdown(retryCountdown)}`
+							: 'processing'}
+					</p>
 				</div>
 				<div className="flex gap-2">
 					<button
@@ -465,13 +461,13 @@ export default function SentientUselessBoxProject() {
 					const el = scrollRef.current
 					if (!el) { return }
 					const top = el.scrollTop
-					if (top > prevScrollTopRef.current) {
-						lastScrollDirectionRef.current = 'down'
-					} else if (top < prevScrollTopRef.current) {
-						lastScrollDirectionRef.current = 'up'
+					const atBottom = el.scrollHeight - top - el.clientHeight < 50
+					if (top < prevScrollTopRef.current) {
+						userScrolledUpRef.current = true
+					} else if (atBottom) {
+						userScrolledUpRef.current = false
 					}
 					prevScrollTopRef.current = top
-					wasAtBottomRef.current = el.scrollHeight - top - el.clientHeight < 600
 				}}
 				className="h-64 sm:h-96 overflow-y-auto border border-border divide-y divide-border/40"
 			>
