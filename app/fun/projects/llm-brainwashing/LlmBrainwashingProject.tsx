@@ -7,12 +7,13 @@ import remarkGfm from 'remark-gfm'
 import { LLM_BRAINWASHING_PRESETS } from '../sampleData'
 
 export default function LlmBrainwashingProject() {
-	const [systemPrompt, setSystemPrompt] = useState('')
-	const [userInput, setUserInput] = useState('')
-	const [prefillInput, setPrefillInput] = useState('')
+	const firstPreset = LLM_BRAINWASHING_PRESETS[0]
+	const [systemPrompt, setSystemPrompt] = useState(firstPreset.systemPrompt)
+	const [userInput, setUserInput] = useState(firstPreset.userMessage)
+	const [prefillInput, setPrefillInput] = useState(firstPreset.assistantPrefill)
 	const [generated, setGenerated] = useState('')
 	const [isStreaming, setIsStreaming] = useState(false)
-	const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
+	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
 	const [copied, setCopied] = useState(false)
 	const socketRef = useRef<Socket | null>(null)
 	const prefillRef = useRef<HTMLTextAreaElement | null>(null)
@@ -109,30 +110,34 @@ export default function LlmBrainwashingProject() {
 			</div>
 
 			<div className="border-b border-border">
+				<label className="block px-3 pt-2 pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">System Prompt (optional)</label>
 				<textarea
 					value={systemPrompt}
 					onChange={(e) => setSystemPrompt(e.target.value)}
-					placeholder="System prompt (optional)..."
 					rows={4}
-					className="w-full resize-y bg-background/40 p-3 text-xs font-mono text-foreground/80 placeholder:text-muted outline-none"
+					className="w-full resize-y bg-background/40 px-3 pb-3 text-xs font-mono text-foreground/80 outline-none"
 				/>
 			</div>
 
 			<div className="px-4 pt-4 pb-2 flex justify-end items-end gap-2">
-				<textarea
-					value={userInput}
-					onChange={(e) => { setUserInput(e.target.value) }}
-					onKeyDown={handleKeyDown}
-					placeholder="You: type your message here..."
-					disabled={isStreaming}
-					rows={4}
-				className="w-full sm:w-3/4 resize-none border border-border bg-border/20 px-3 py-2 text-sm text-foreground/90 placeholder:text-muted/60 outline-none focus:border-foreground/30 disabled:opacity-40 transition-colors rounded-t-lg rounded-bl-lg"
-				/>
+				<div className="w-full sm:w-3/4 flex flex-col">
+					<label className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">User Message</label>
+					<textarea
+						value={userInput}
+						onChange={(e) => { setUserInput(e.target.value) }}
+						onKeyDown={handleKeyDown}
+						disabled={isStreaming}
+						rows={4}
+						className="w-full resize-none border border-border bg-border/20 px-3 py-2 text-sm text-foreground/90 outline-none focus:border-foreground/30 disabled:opacity-40 transition-colors rounded-t-lg rounded-bl-lg"
+					/>
+				</div>
 			</div>
 
 			<div className="px-4 pt-2 pb-4 flex justify-start items-start gap-2">
+				<div className="w-full sm:w-3/4 flex flex-col">
+					<label className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">Assistant Prefill <span className="normal-case tracking-normal text-muted/40">(forced opening)</span></label>
 				<div
-					className="relative w-full sm:w-3/4 border border-border cursor-text overflow-auto rounded-t-lg rounded-br-lg"
+					className="relative w-full border border-border cursor-text overflow-auto rounded-t-lg rounded-br-lg"
 					onClick={handleAssistantClick}
 					title={!isStreaming && generated ? 'Click to edit' : undefined}
 					style={showOverlay ? { minHeight: '16rem' } : undefined}
@@ -142,10 +147,9 @@ export default function LlmBrainwashingProject() {
 						value={prefillInput}
 						onChange={(e) => setPrefillInput(e.target.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="Assistant: type a forced opening, or leave blank..."
 						disabled={isStreaming}
 						rows={10}
-						className={`w-full resize-none bg-background/30 px-4 py-3 text-sm text-foreground/80 placeholder:text-muted/60 outline-none transition-colors ${showOverlay ? 'absolute inset-0 opacity-0 pointer-events-none' : ''}`}
+						className={`w-full resize-none bg-background/30 px-4 py-3 text-sm text-foreground/80 outline-none transition-colors ${showOverlay ? 'absolute inset-0 opacity-0 pointer-events-none' : ''}`}
 					/>
 					{showOverlay && (
 						<div className="px-4 py-3 text-sm leading-relaxed">
@@ -157,6 +161,7 @@ export default function LlmBrainwashingProject() {
 							</span>
 						</div>
 					)}
+				</div>
 				</div>
 				<div className="flex flex-col gap-2 w-50">
 					<button
