@@ -213,6 +213,7 @@ export default function SentientUselessBoxProject() {
 
 		socket.on('box:done', ({ history }: { toolCall: BoxAction | null; history: MessageParam[] }) => {
 			pendingActionsRef.current.push({ type: 'done', history })
+			startDrain()
 		})
 
 		socket.on('box:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
