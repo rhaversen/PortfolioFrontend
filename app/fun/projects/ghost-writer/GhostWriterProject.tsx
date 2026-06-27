@@ -1,0 +1,187 @@
+﻿'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { io, type Socket } from 'socket.io-client'
+
+const MAX_TOKENS = 24
+let nextId = 0
+
+export default function GhostWriterProject() {
+	const [chars, setChars] = useState('')
+	const [ghosts, setGhosts] = useState<Record<number, string>>({})
+	const [loadingRows, setLoadingRows] = useState<Set<number>>(new Set())
+	const [focused, setFocused] = useState(false)
+	const [debug, setDebug] = useState(false)
+
+	const socketRef = useRef<Socket | null>(null)
+	const charsRef = useRef('')
+	// Maps requestId → prefix length so chunks route to the right row
+	const requestMapRef = useRef(new Map<string, number>())
+
+	useEffect(() => {
+		const socket = io(process.env.NEXT_PUBLIC_WS_URL ?? '/')
+		socketRef.current = socket
+
+		socket.on('predict:chunk', ({ requestId, text: chunk }: { requestId: string; text: string }) => {
+			const idx = requestMapRef.current.get(requestId)
+			if (idx === undefined) return
+			setGhosts(prev => ({ ...prev, [idx]: (prev[idx] ?? '') + chunk.replace(/\n/g, ' ') }))
+		})
+
+		socket.on('predict:done', ({ requestId }: { requestId: string }) => {
+			const idx = requestMapRef.current.get(requestId)
+			requestMapRef.current.delete(requestId)
+			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
+		})
+
+		socket.on('predict:error', ({ requestId }: { requestId: string }) => {
+			const idx = requestMapRef.current.get(requestId)
+			requestMapRef.current.delete(requestId)
+			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
+		})
+
+		return () => { socket.disconnect() }
+	}, [])
+
+	function predict(prefix: string) {
+		const requestId = `r${nextId++}`
+		requestMapRef.current.set(requestId, prefix.length)
+		setLoadingRows(prev => new Set(prev).add(prefix.length))
+		socketRef.current?.emit('predict:request', { requestId, text: prefix, maxTokens: MAX_TOKENS })
+	}
+
+	function cancelRow(len: number) {
+		for (const [rid, idx] of requestMapRef.current) {
+			if (idx === len) {
+				socketRef.current?.emit('predict:cancel', { requestId: rid })
+				requestMapRef.current.delete(rid)
+			}
+		}
+		setLoadingRows(prev => { const s = new Set(prev); s.delete(len); return s })
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+		if (e.key === 'Backspace') {
+			e.preventDefault()
+			const current = charsRef.current
+			if (!current.length) return
+			cancelRow(current.length)
+			const next = current.slice(0, -1)
+			charsRef.current = next
+			setChars(next)
+			setGhosts(prev => { const c = { ...prev }; delete c[current.length]; return c })
+		} else if (e.key === ' ') {
+			e.preventDefault()
+			const next = charsRef.current + ' '
+			charsRef.current = next
+			setChars(next)
+		} else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			e.preventDefault()
+			const next = charsRef.current + e.key
+			charsRef.current = next
+			setChars(next)
+			setGhosts(prev => { const c = { ...prev }; delete c[next.length]; return c })
+			predict(next)
+		}
+	}
+
+	function handleClear() {
+		for (const rid of requestMapRef.current.keys()) {
+			socketRef.current?.emit('predict:cancel', { requestId: rid })
+		}
+		requestMapRef.current.clear()
+		charsRef.current = ''
+		setChars('')
+		setGhosts({})
+		setLoadingRows(new Set())
+	}
+
+	return (
+		<div className="flex flex-col gap-0 border border-border">
+			<div
+				tabIndex={0}
+				onKeyDown={handleKeyDown}
+				onFocus={() => setFocused(true)}
+				onBlur={() => setFocused(false)}
+				className="font-mono text-sm leading-relaxed p-3 min-h-100 outline-none cursor-text focus:bg-black/2 transition-colors"
+				aria-label="Ghost writer — click to focus and start typing"
+			>
+				<div className="flex whitespace-pre">
+					{chars.length === 0 && !focused ? (
+						<span className="text-foreground/30">Click here and start typing...</span>
+					) : (
+						<>
+							<span className="text-foreground">{chars}</span>
+							{focused && (
+								<span className="inline-block w-px h-[1em] bg-foreground/60 animate-pulse translate-y-1" />
+							)}
+						</>
+					)}
+				</div>
+				{[...chars].map((char, i) => {
+							if (char === ' ') return null
+							const len = i + 1
+							const prefix = chars.slice(0, len)
+							const rawGhost = ghosts[len] ?? ''
+							const ghost = prefix.endsWith(' ') ? rawGhost.trimStart() : rawGhost
+
+							return (
+								<div key={len} className="flex whitespace-nowrap overflow-hidden">
+									<span className="text-foreground shrink-0">{prefix}</span>
+									{ghost && (
+										<span
+											className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
+											style={{
+												maskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
+												WebkitMaskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
+											}}
+										>
+											{ghost}
+										</span>
+									)}
+						{loadingRows.has(len) && !ghost && (
+							<span className="inline-flex items-center gap-px align-middle ml-0.5">
+											{[0, 1, 2].map(j => (
+												<span
+													key={j}
+													className="inline-block w-1 h-1 rounded-full bg-foreground/15 animate-bounce"
+													style={{ animationDelay: `${j * 160}ms` }}
+												/>
+											))}
+										</span>
+									)}
+								</div>
+							)
+				}).reverse()}
+			</div>
+
+			<div className="flex justify-end gap-2 px-3 py-2 border-t border-border">
+				<button
+					onClick={() => setDebug(d => !d)}
+					className="cursor-pointer border border-border px-2 py-0.5 text-[0.65rem] font-mono text-foreground/70 hover:border-foreground/40 hover:text-foreground transition-colors"
+				>
+					{debug ? 'Hide debug' : 'Debug'}
+				</button>
+				<button
+					onClick={handleClear}
+					className="cursor-pointer border border-border px-2 py-0.5 text-[0.65rem] font-mono text-foreground/70 hover:border-foreground/40 hover:text-foreground transition-colors"
+				>
+					Clear
+				</button>
+			</div>
+			{debug && (
+				<div className="border-t border-border p-3 font-mono text-[0.65rem] text-foreground/60 space-y-1">
+					{Object.entries(ghosts)
+						.sort(([a], [b]) => Number(b) - Number(a))
+						.map(([len, raw]) => (
+							<div key={len}>
+								<span className="text-foreground/70">{JSON.stringify(chars.slice(0, Number(len)))}</span>
+								<span className="text-foreground/40"> + </span>
+								<span className="text-amber-500/80">{JSON.stringify(raw)}</span>
+							</div>
+						))}
+				</div>
+			)}
+		</div>
+	)
+}
