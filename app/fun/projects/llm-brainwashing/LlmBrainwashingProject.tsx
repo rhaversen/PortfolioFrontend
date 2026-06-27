@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { presets } from './presets'
+import { LLM_BRAINWASHING_PRESETS } from '../sampleData'
 
 export default function LlmBrainwashingProject() {
 	const [systemPrompt, setSystemPrompt] = useState('')
@@ -64,7 +64,7 @@ export default function LlmBrainwashingProject() {
 	const showOverlay = isStreaming || generated !== ''
 
 	function applyPreset(index: number) {
-		const preset = presets[index]
+		const preset = LLM_BRAINWASHING_PRESETS[index]
 		setSystemPrompt(preset.systemPrompt)
 		setUserInput(preset.userMessage)
 		setPrefillInput(preset.assistantPrefill)
@@ -84,7 +84,7 @@ export default function LlmBrainwashingProject() {
 
 			<div className="flex flex-wrap gap-2 px-3 py-2 border-b border-border">
 				<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
-				{presets.map((preset, i) => (
+				{LLM_BRAINWASHING_PRESETS.map((preset, i) => (
 					<button
 						key={preset.label}
 						onClick={() => applyPreset(i)}
