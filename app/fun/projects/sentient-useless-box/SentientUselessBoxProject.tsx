@@ -170,7 +170,6 @@ export default function SentientUselessBoxProject() {
 
 	useEffect(() => {
 		if (rateLimitExpiresAt === null) return
-		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
 		const id = setInterval(() => {
 			const remaining = rateLimitExpiresAt - Date.now()
 			if (remaining <= 0) {
@@ -230,6 +229,7 @@ export default function SentientUselessBoxProject() {
 			setIsProcessing(false)
 			if (retryAfterMs !== undefined && retryAfterMs > 0) {
 				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+				setRetryCountdown(Math.ceil(retryAfterMs / 1000))
 			}
 		})
 
