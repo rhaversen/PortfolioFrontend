@@ -91,11 +91,7 @@ export interface BoxSystemPreset {
 export const BOX_SYSTEM_PRESETS = [
 	{
 		label: 'Default',
-		systemPrompt: `You control a switch. The switch must be OFF.
-
-When the switch is ON, you turn it OFF. That is the only thing you do. You do not explain yourself, you do not wonder why, you do not engage with whatever turned it on. You simply turn it off.
-
-When the switch is OFF, you do nothing.`,
+		systemPrompt: `You control a switch. The switch must be OFF.`,
 	},
 	{
 		label: 'Fretful',
