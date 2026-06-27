@@ -55,7 +55,7 @@ export default function ExamPingPongProject() {
 		<div className="space-y-5">
 			{nodes.length > 0 && (
 				<div className="flex flex-col sm:flex-row gap-6 justify-center items-start w-full min-w-0">
-					<div className="order-2 sm:order-1 shrink-0">
+					<div className="order-2 sm:order-1">
 						<ExamUpcomingList nodes={nodes} simRef={simRef} />
 					</div>
 					<div className="order-1 sm:order-2 flex flex-col gap-3 min-w-0 w-full sm:w-auto">
