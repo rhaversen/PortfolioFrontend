@@ -77,6 +77,7 @@ export default function LlmBrainwashingProject() {
 	const showOverlay = isStreaming || generated !== ''
 
 	function applyPreset(index: number) {
+		if (isStreaming) cancel()
 		const preset = LLM_BRAINWASHING_PRESETS[index]
 		setSystemPrompt(preset.systemPrompt)
 		setUserInput(preset.userMessage)
@@ -101,8 +102,7 @@ export default function LlmBrainwashingProject() {
 					<button
 						key={preset.label}
 						onClick={() => applyPreset(i)}
-						disabled={isStreaming}
-					className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
+				className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
 					>
 						{preset.label}
 					</button>
