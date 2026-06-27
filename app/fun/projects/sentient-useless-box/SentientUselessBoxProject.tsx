@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { BOX_SYSTEM_PRESETS } from '../sampleData'
 
 type BoxAction = 'turn_off' | 'turn_on'
 
@@ -21,7 +22,9 @@ export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
 	const [blocks, setBlocks] = useState<Block[]>([])
 	const [isProcessing, setIsProcessing] = useState(false)
-	const [systemPrompt, setSystemPrompt] = useState<string | null>(null)
+	const [systemPrompt, setSystemPrompt] = useState(BOX_SYSTEM_PRESETS[0].systemPrompt)
+	const [selectedBoxPreset, setSelectedBoxPreset] = useState<number | null>(0)
+	const systemPromptRef = useRef(BOX_SYSTEM_PRESETS[0].systemPrompt)
 	const socketRef = useRef<Socket | null>(null)
 	const historyRef = useRef<MessageParam[]>([])
 	const scrollRef = useRef<HTMLDivElement>(null)
@@ -101,14 +104,6 @@ export default function SentientUselessBoxProject() {
 	}, [flushQueue])
 
 	useEffect(() => {
-		const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
-		fetch(`${apiUrl}/service/box/system-prompt`)
-			.then((r) => r.json())
-			.then((data) => setSystemPrompt(data.systemPrompt))
-			.catch(() => {})
-	}, [])
-
-	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
 		const socket = io(apiUrl)
 		socketRef.current = socket
@@ -120,7 +115,7 @@ export default function SentientUselessBoxProject() {
 			lastTimestampRef.current = Date.now()
 			setIsProcessing(true)
 			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
-			socket.emit('box:trigger', { toggleState: false })
+			socket.emit('box:trigger', { toggleState: false, systemPrompt: systemPromptRef.current })
 		})
 
 		socket.on('box:chunk', ({ text }: { text: string }) => {
@@ -173,6 +168,30 @@ export default function SentientUselessBoxProject() {
 		}
 	}, [blocks])
 
+	function applyBoxPreset(index: number) {
+		const preset = BOX_SYSTEM_PRESETS[index]
+		systemPromptRef.current = preset.systemPrompt
+		setSystemPrompt(preset.systemPrompt)
+		setSelectedBoxPreset(index)
+		socketRef.current?.emit('box:cancel')
+		segQueueRef.current = []
+		pendingActionsRef.current = []
+		if (drainIntervalRef.current !== null) {
+			clearInterval(drainIntervalRef.current)
+			drainIntervalRef.current = null
+		}
+		setSwitchOn(false)
+		setIsProcessing(true)
+		historyRef.current = []
+		// eslint-disable-next-line react-hooks/purity
+		const now = Date.now()
+		sessionStartRef.current = now
+		lastTimestampRef.current = now
+		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
+		socketRef.current?.emit('box:reset')
+		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt: preset.systemPrompt })
+	}
+
 	function handleStop() {
 		segQueueRef.current = []
 		pendingActionsRef.current = []
@@ -199,7 +218,7 @@ export default function SentientUselessBoxProject() {
 		lastTimestampRef.current = Date.now()
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
-		socketRef.current?.emit('box:trigger', { toggleState: false })
+		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt })
 	}
 
 	function handleToggle() {
@@ -252,23 +271,43 @@ export default function SentientUselessBoxProject() {
 		socketRef.current?.emit('box:trigger', {
 			toggleState: newState,
 			history: historyRef.current,
+			systemPrompt,
 		})
 	}
 
 	return (
 		<div className="space-y-6">
-			{systemPrompt !== null && (
-				<details className="border border-border/40 group">
-					<summary className="cursor-pointer px-4 py-2.5 flex items-center justify-between text-[0.6rem] font-mono uppercase tracking-widest text-muted select-none hover:text-foreground/60 transition-colors list-none">
-						<span>Agent system prompt</span>
-						<span className="text-muted group-open:rotate-180 transition-transform">▾</span>
-					</summary>
-					<div className="px-4 pb-4 pt-3 border-t border-border/30 bg-border/5">
-						<p className="text-[0.6rem] font-mono text-muted italic mb-3">This is what the agent is told — not instructions for you.</p>
-						<pre className="text-xs font-mono text-foreground/60 whitespace-pre-wrap leading-relaxed">{systemPrompt}</pre>
+			<div className="border border-border/40">
+				<div className="px-4 py-2.5 border-b border-border/30">
+					<span className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Agent system prompt</span>
+				</div>
+				<div className="border-b border-border/30 bg-border/5">
+					<div className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30">
+						<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
+						{BOX_SYSTEM_PRESETS.map((preset, i) => (
+							<button
+								key={preset.label}
+								onClick={() => applyBoxPreset(i)}
+							className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedBoxPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
+							>
+								{preset.label}
+							</button>
+						))}
 					</div>
-				</details>
-			)}
+					<textarea
+						aria-label="Agent system prompt"
+						value={systemPrompt}
+						onChange={(e) => {
+							systemPromptRef.current = e.target.value
+							setSystemPrompt(e.target.value)
+							setSelectedBoxPreset(null)
+						}}
+						disabled={isProcessing}
+						rows={8}
+						className="w-full resize-y bg-transparent px-4 py-3 text-xs font-mono text-foreground/70 placeholder:text-muted outline-none disabled:opacity-50"
+					/>
+				</div>
+			</div>
 
 			<div className="flex items-center gap-6 py-4 border-y border-border justify-between">
 				<button
