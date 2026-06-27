@@ -46,6 +46,12 @@ interface GpaPoint {
 	gpa: number;
 	examGrade: number;
 	ects: number;
+	name: string;
+}
+
+interface HoverState {
+	x: number;
+	y: number;
 }
 
 interface ComputedData {
@@ -65,10 +71,16 @@ function computeGpaPoints(nodes: ExamNode[]): ComputedData {
 		totalEcts += n.ects;
 		if (totalEcts > 0) {
 			const avg = totalWG / totalEcts;
-			pts.push({ ms: n.dateMs, avgGrade: avg, gpa: gradeToGpa(avg), examGrade: n.grade, ects: n.ects });
+			pts.push({ ms: n.dateMs, avgGrade: avg, gpa: gradeToGpa(avg), examGrade: n.grade, ects: n.ects, name: n.name });
 		}
 	}
 	return { pts, maxEcts };
+}
+
+function formatDanishGrade(g: number): string {
+	if (g === 0) return "00";
+	if (g === 2) return "02";
+	return String(g);
 }
 
 function drawGpaGraph(
@@ -79,6 +91,7 @@ function drawGpaGraph(
 	canvasW: number,
 	simStart: number,
 	simEnd: number,
+	hover: HoverState | null,
 ): void {
 	const { pts: gpaPoints, maxEcts } = data;
 	ctx.clearRect(0, 0, canvasW * dpr, GPA_H * dpr);
@@ -188,14 +201,18 @@ function drawGpaGraph(
 		ctx.stroke();
 	}
 
-	// ── Cursor ───────────────────────────────────────────────────────────────
+	// ── Cursor / Hover ──────────────────────────────────────────────────────
+	const cursorMs = hover
+		? simStart + ((hover.x - ML) / plotW) * (simEnd - simStart)
+		: simTime;
+	const cursorX = Math.max(ML, Math.min(canvasW - MR, hover ? hover.x : msToX(simTime)));
+
 	let cursorPt: GpaPoint | null = null;
 	for (const pt of gpaPoints) {
-		if (pt.ms <= simTime) cursorPt = pt;
+		if (pt.ms <= cursorMs) cursorPt = pt;
 		else break;
 	}
 
-	const cursorX = Math.max(ML, Math.min(canvasW - MR, msToX(simTime)));
 	ctx.beginPath();
 	ctx.moveTo(cursorX, MT);
 	ctx.lineTo(cursorX, GPA_H - MB);
@@ -204,6 +221,33 @@ function drawGpaGraph(
 	ctx.setLineDash([3, 3]);
 	ctx.stroke();
 	ctx.setLineDash([]);
+
+	let hoveredCircle: GpaPoint | null = null;
+	if (hover) {
+		const effectiveMax = maxEcts > 0 ? maxEcts : 1;
+		for (const pt of gpaPoints) {
+			const cx = msToX(pt.ms);
+			const cy = gradeToY(pt.examGrade);
+			const r = 3 + (pt.ects / effectiveMax) * 5.5;
+			const dx = hover.x - cx;
+			const dy = hover.y - cy;
+			if (dx * dx + dy * dy <= (r + 3) * (r + 3)) {
+				hoveredCircle = pt;
+				break;
+			}
+		}
+		if (hoveredCircle) {
+			const effectiveMax2 = maxEcts > 0 ? maxEcts : 1;
+			const hcx = msToX(hoveredCircle.ms);
+			const hcy = gradeToY(hoveredCircle.examGrade);
+			const hr = 3 + (hoveredCircle.ects / effectiveMax2) * 5.5;
+			ctx.beginPath();
+			ctx.arc(hcx, hcy, hr + 3.5, 0, Math.PI * 2);
+			ctx.strokeStyle = "rgba(0,0,0,0.70)";
+			ctx.lineWidth = 1.5;
+			ctx.stroke();
+		}
+	}
 
 	if (cursorPt !== null) {
 		const crossY = gradeToY(cursorPt.avgGrade);
@@ -216,28 +260,70 @@ function drawGpaGraph(
 		ctx.lineWidth = 1.5;
 		ctx.stroke();
 
-		const line1 = cursorPt.avgGrade.toFixed(2);
-		const line2 = cursorPt.gpa.toFixed(2) + " GPA";
-		ctx.font = "10px monospace";
-		const tw = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
 		const pad = 6;
-		const bw = tw + pad * 2;
-		const bh = 30;
-		let bx = cursorX + 9;
-		let by = crossY - bh / 2;
-		if (bx + bw > canvasW - MR - 2) bx = cursorX - bw - 9;
-		by = Math.max(MT + 1, Math.min(GPA_H - MB - bh - 1, by));
+		const gap = 4;
+		ctx.font = "10px monospace";
 
-		ctx.fillStyle = "rgba(255,255,255,0.94)";
-		ctx.fillRect(bx, by, bw, bh);
-		ctx.strokeStyle = "rgba(0,0,0,0.10)";
-		ctx.lineWidth = 0.5;
-		ctx.strokeRect(bx, by, bw, bh);
-		ctx.fillStyle = "rgba(0,0,0,0.82)";
-		ctx.textAlign = "left";
-		ctx.textBaseline = "top";
-		ctx.fillText(line1, bx + pad, by + 5);
-		ctx.fillText(line2, bx + pad, by + 17);
+		const avgLine1 = cursorPt.avgGrade.toFixed(2);
+		const avgLine2 = cursorPt.gpa.toFixed(2) + " GPA";
+		const avgTw = Math.max(ctx.measureText(avgLine1).width, ctx.measureText(avgLine2).width);
+		const avgBw = avgTw + pad * 2;
+		const avgBh = 30;
+
+		if (hoveredCircle) {
+			const circLine1 = hoveredCircle.name;
+			const circLine2 = `Grade: ${formatDanishGrade(hoveredCircle.examGrade)}`;
+			const circLine3 = `ECTS: ${hoveredCircle.ects}`;
+			const circTw = Math.max(ctx.measureText(circLine1).width, ctx.measureText(circLine2).width, ctx.measureText(circLine3).width);
+			const circBw = circTw + pad * 2;
+			const circBh = 44;
+
+			const totalH = circBh + gap + avgBh;
+			const bw = Math.max(circBw, avgBw);
+			let bx = cursorX + 9;
+			if (bx + bw > canvasW - MR - 2) bx = cursorX - bw - 9;
+			let by = crossY - totalH / 2;
+			by = Math.max(MT + 1, Math.min(GPA_H - MB - totalH - 1, by));
+
+			const drawBox = (x: number, y: number, w: number, h: number) => {
+				ctx.fillStyle = "rgba(255,255,255,0.94)";
+				ctx.fillRect(x, y, w, h);
+				ctx.strokeStyle = "rgba(0,0,0,0.10)";
+				ctx.lineWidth = 0.5;
+				ctx.strokeRect(x, y, w, h);
+			};
+
+			drawBox(bx, by, bw, circBh);
+			ctx.fillStyle = "rgba(0,0,0,0.82)";
+			ctx.textAlign = "left";
+			ctx.textBaseline = "top";
+			ctx.fillText(circLine1, bx + pad, by + 5);
+			ctx.fillText(circLine2, bx + pad, by + 17);
+			ctx.fillText(circLine3, bx + pad, by + 29);
+
+			const by2 = by + circBh + gap;
+			drawBox(bx, by2, bw, avgBh);
+			ctx.fillStyle = "rgba(0,0,0,0.82)";
+			ctx.fillText(avgLine1, bx + pad, by2 + 5);
+			ctx.fillText(avgLine2, bx + pad, by2 + 17);
+		} else {
+			const bw = avgBw;
+			const bh = avgBh;
+			let bx = cursorX + 9;
+			let by = crossY - bh / 2;
+			if (bx + bw > canvasW - MR - 2) bx = cursorX - bw - 9;
+			by = Math.max(MT + 1, Math.min(GPA_H - MB - bh - 1, by));
+			ctx.fillStyle = "rgba(255,255,255,0.94)";
+			ctx.fillRect(bx, by, bw, bh);
+			ctx.strokeStyle = "rgba(0,0,0,0.10)";
+			ctx.lineWidth = 0.5;
+			ctx.strokeRect(bx, by, bw, bh);
+			ctx.fillStyle = "rgba(0,0,0,0.82)";
+			ctx.textAlign = "left";
+			ctx.textBaseline = "top";
+			ctx.fillText(avgLine1, bx + pad, by + 5);
+			ctx.fillText(avgLine2, bx + pad, by + 17);
+		}
 	}
 
 	ctx.restore();
@@ -252,6 +338,7 @@ interface Props {
 
 export default function ExamGpaViz({ nodes, simRef, simStart, simEnd }: Props) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const hoverRef = useRef<HoverState | null>(null);
 	const data = useMemo(() => computeGpaPoints(nodes), [nodes]);
 
 	useEffect(() => {
@@ -261,6 +348,14 @@ export default function ExamGpaViz({ nodes, simRef, simStart, simEnd }: Props) {
 		const dpr = window.devicePixelRatio || 1;
 		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
+
+		const onMouseMove = (e: MouseEvent) => {
+			const rect = canvas.getBoundingClientRect();
+			hoverRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+		};
+		const onMouseLeave = () => { hoverRef.current = null; };
+		canvas.addEventListener("mousemove", onMouseMove);
+		canvas.addEventListener("mouseleave", onMouseLeave);
 
 		let raf: number;
 		const loop = () => {
@@ -272,20 +367,24 @@ export default function ExamGpaViz({ nodes, simRef, simStart, simEnd }: Props) {
 					canvas.width = physW;
 					canvas.height = physH;
 				}
-				drawGpaGraph(ctx, data, simRef.current.time, dpr, w, simStart, simEnd);
+				drawGpaGraph(ctx, data, simRef.current.time, dpr, w, simStart, simEnd, hoverRef.current);
 			}
 			raf = requestAnimationFrame(loop);
 		};
 		raf = requestAnimationFrame(loop);
 
-		return () => cancelAnimationFrame(raf);
+		return () => {
+			cancelAnimationFrame(raf);
+			canvas.removeEventListener("mousemove", onMouseMove);
+			canvas.removeEventListener("mouseleave", onMouseLeave);
+		};
 	}, [data, simRef, simStart, simEnd]);
 
 	return (
 		<div className="space-y-1">
 			<canvas
 				ref={canvasRef}
-				style={{ display: "block", width: "100%", height: `${GPA_H}px` }}
+				style={{ display: "block", width: "100%", height: `${GPA_H}px`, cursor: "crosshair" }}
 			/>
 			<div className="flex items-center justify-center gap-5 text-[0.62rem] font-mono text-muted">
 				<span className="flex items-center gap-1.5">
