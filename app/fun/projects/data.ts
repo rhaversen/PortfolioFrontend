@@ -1,10 +1,17 @@
 import AlcoholCheapskateProject from "./alcohol-cheapskate/AlcoholCheapskateProject";
+import GhostWriterProject from "./ghost-writer/GhostWriterProject";
 import SentientUselessBoxProject from "./sentient-useless-box/SentientUselessBoxProject";
 import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
+	{
+		id: "ghost-writer",
+		title: "Ghost Writer",
+		summary: "An LLM shadows your typing and suggests what comes next. Pause and it fills the silence.",
+		Component: GhostWriterProject,
+	},
 	{
 		id: "llm-brainwashing",
 		title: "LLM Brainwashing",
