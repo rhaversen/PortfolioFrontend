@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
-const CELL_SIZE = 100;
-const CELL_INSET = 10;
+const CELL_SIZE = 50;
+const CELL_INSET = 5;
 const CELL_DRAW = CELL_SIZE - CELL_INSET * 2;
 const CELL_RADIUS = CELL_DRAW / 2;
 
 const INITIAL_DENSITY = 0.5;
 const FADE_TURNS = 3;
-const BLUR_PX = 20;
+const BLUR_PX = 10;
 const MAX_OPACITY = 1.0;
 const MIN_SCALE = 0.8;
-const FADE_GAMMA =1.5;
+const FADE_GAMMA = 1.5;
 const CULL = 0.001;
 const PALETTE_STEPS = 5;
 const PALETTE_START = { r: 170, g: 178, b: 198 };
