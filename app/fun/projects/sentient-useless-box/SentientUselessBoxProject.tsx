@@ -57,22 +57,9 @@ const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { k
 	return (
 		<div className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
 			<div className="markdown-body">
-				{!block.done ? (
-					block.text.split('\n\n').map((para, i, arr) => {
-						const isLast = i === arr.length - 1
-						return (
-							<p key={i}>
-								{isLast ? para.slice(0, -1) : para}
-								{isLast && para.length > 0 && (
-									<span key={block.text.length} className="animate-letter-fade">
-										{para.slice(-1)}
-									</span>
-								)}
-							</p>
-						)
-					})
-				) : (
-					<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
+				<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
+				{!block.done && (
+					<span className="inline-block w-1 h-[0.9em] bg-foreground/30 align-middle animate-pulse" />
 				)}
 			</div>
 		</div>
