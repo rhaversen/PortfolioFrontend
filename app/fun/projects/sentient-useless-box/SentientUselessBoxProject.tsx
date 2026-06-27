@@ -100,6 +100,7 @@ export default function SentientUselessBoxProject() {
 	const segQueueRef = useRef<QueueSegment[]>([])
 	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const pendingActionsRef = useRef<PendingAction[]>([])
+	const revealedToolCallsRef = useRef(0)
 	const getId = () => String(idRef.current++)
 
 	const lastTimestampRef = useRef<number>(0)
@@ -120,6 +121,7 @@ export default function SentientUselessBoxProject() {
 			if (action.type === 'done') {
 				historyRef.current = action.history
 				lastTimestampRef.current = Date.now()
+				revealedToolCallsRef.current = 0
 				setBlocks((prev) => {
 					const last = prev[prev.length - 1]
 					if (last?.kind === 'text' && !last.done) {
@@ -144,6 +146,7 @@ export default function SentientUselessBoxProject() {
 			}
 			if (seg.type === 'tool') {
 				segQueueRef.current.shift()
+				revealedToolCallsRef.current++
 				if (seg.toolName === 'turn_off') { setSwitchOn(false) }
 				if (seg.toolName === 'turn_on') { setSwitchOn(true) }
 				setBlocks((prev) => {
@@ -260,6 +263,7 @@ export default function SentientUselessBoxProject() {
 		socketRef.current?.emit('box:cancel')
 		segQueueRef.current = []
 		pendingActionsRef.current = []
+		revealedToolCallsRef.current = 0
 		if (drainIntervalRef.current !== null) {
 			clearInterval(drainIntervalRef.current)
 			drainIntervalRef.current = null
@@ -305,6 +309,7 @@ export default function SentientUselessBoxProject() {
 		historyRef.current = []
 		segQueueRef.current = []
 		pendingActionsRef.current = []
+		revealedToolCallsRef.current = 0
 		if (drainIntervalRef.current !== null) {
 			clearInterval(drainIntervalRef.current)
 			drainIntervalRef.current = null
@@ -322,55 +327,64 @@ export default function SentientUselessBoxProject() {
 		const newState = !switchOn
 		setSwitchOn(newState)
 		setIsProcessing(true)
+		const elapsedMs = Date.now() - (lastTimestampRef.current || sessionStartRef.current)
 		const ts = getTimestamp()
 
-		// Flush any in-flight queue immediately so the user block appears in the right order
 		const remaining = segQueueRef.current.splice(0)
+		const pendingDone = pendingActionsRef.current.find(a => a.type === 'done')
 		pendingActionsRef.current = []
 		if (drainIntervalRef.current !== null) {
 			clearInterval(drainIntervalRef.current)
 			drainIntervalRef.current = null
 		}
-		if (remaining.length > 0) {
-			setBlocks((prev) => {
-				let updated = prev
+
+		// Build a partial history reflecting only what was revealed during the drain
+		let overrideHistory: MessageParam[] | undefined
+		if (pendingDone) {
+			const revealedN = revealedToolCallsRef.current
+			const base = historyRef.current
+			const fullHistory = pendingDone.history
+			const newMessages = fullHistory.slice(base.length)
+			const keepCount = 1 + 2 * revealedN
+			const partialMessages = [...newMessages.slice(0, keepCount)]
+
+			// If the agent was mid-way through an assistant message, include only revealed text
+			const nextMsg = newMessages[keepCount]
+			if (nextMsg?.role === 'assistant') {
+				const rawContent = nextMsg.content
+				const fullText = Array.isArray(rawContent)
+					? (rawContent as Array<{ type: string; text?: string }>).find(b => b.type === 'text')?.text ?? ''
+					: typeof rawContent === 'string' ? rawContent : ''
+				let remainingText = ''
 				for (const seg of remaining) {
-					if (seg.type === 'text') {
-						const last = updated[updated.length - 1]
-						if (last?.kind === 'text' && !last.done) {
-							updated = [...updated.slice(0, -1), { ...last, text: last.text + seg.text, done: true }]
-						} else if (seg.text.length > 0) {
-							updated = [...updated, { id: String(idRef.current++), kind: 'text' as const, text: seg.text, done: true }]
-						}
-					} else {
-						const last = updated[updated.length - 1]
-						const closed = last?.kind === 'text' && !last.done
-							? [...updated.slice(0, -1), { ...last, done: true }]
-							: updated
-						updated = [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, timestamp: seg.ts }]
-					}
+					if (seg.type === 'text') remainingText += seg.text
+					else break
 				}
-				const last = updated[updated.length - 1]
-				if (last?.kind === 'text' && !last.done) {
-					updated = [...updated.slice(0, -1), { ...last, done: true }]
+				const revealedText = fullText.slice(0, fullText.length - remainingText.length)
+				if (revealedText.trim()) {
+					partialMessages.push({ role: 'assistant', content: revealedText })
 				}
-				return [...updated, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
-			})
-		} else {
-			setBlocks((prev) => {
-				const closed = prev.map((b) =>
-					b.kind === 'text' && !b.done ? { ...b, done: true } : b,
-				)
-				return [...closed, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
-			})
+			}
+
+			overrideHistory = [...base, ...partialMessages]
+			historyRef.current = overrideHistory
 		}
 
-		const elapsedMs = Date.now() - (lastTimestampRef.current || sessionStartRef.current)
+		revealedToolCallsRef.current = 0
+
+		// Keep only revealed blocks — close any in-progress text block, discard the rest
+		setBlocks((prev) => {
+			const closed = prev.map((b) =>
+				b.kind === 'text' && !b.done ? { ...b, done: true } : b,
+			)
+			return [...closed, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
+		})
+
 		socketRef.current?.emit('box:trigger', {
 			toggleState: newState,
-			history: historyRef.current,
 			systemPrompt,
 			elapsedMs,
+			history: overrideHistory ?? historyRef.current,
 		})
 	}
 
