@@ -3,6 +3,7 @@ import GhostWriterProject from "./ghost-writer/GhostWriterProject";
 import SentientUselessBoxProject from "./sentient-useless-box/SentientUselessBoxProject";
 import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
+import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -35,5 +36,11 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Sentient Useless Box",
 		summary: "A switch. An AI that doesn't want you to flip it. Sometimes it flips it back.",
 		Component: SentientUselessBoxProject,
+	},
+	{
+		id: "animated-commits",
+		title: "Animated Commits",
+		summary: "Paste any public GitHub repo and watch its commit history unfold.",
+		Component: AnimatedCommitsProject,
 	},
 ];
