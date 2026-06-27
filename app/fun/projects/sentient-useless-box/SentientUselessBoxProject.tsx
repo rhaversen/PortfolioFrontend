@@ -398,7 +398,7 @@ export default function SentientUselessBoxProject() {
 													<p key={i}>
 														{isLast ? para.slice(0, -1) : para}
 														{isLast && para.length > 0 && (
-															<span key={block.text.length} className="animate-letterfade">
+															<span key={block.text.length} className="animate-letter-fade">
 																{para.slice(-1)}
 															</span>
 														)}
