@@ -96,6 +96,7 @@ export default function SentientUselessBoxProject() {
 	const sessionStartRef = useRef<number>(0)
 	const lastScrollDirectionRef = useRef<'down' | 'up' | null>(null)
 	const prevScrollTopRef = useRef(0)
+	const wasAtBottomRef = useRef(true)
 	const segQueueRef = useRef<QueueSegment[]>([])
 	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const pendingActionsRef = useRef<PendingAction[]>([])
@@ -192,6 +193,8 @@ export default function SentientUselessBoxProject() {
 			initialSentRef.current = true
 			sessionStartRef.current = Date.now()
 			lastTimestampRef.current = Date.now()
+			wasAtBottomRef.current = true
+			lastScrollDirectionRef.current = null
 			setIsProcessing(true)
 			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 			socket.emit('box:trigger', { toggleState: false, systemPrompt: systemPromptRef.current })
@@ -243,10 +246,8 @@ export default function SentientUselessBoxProject() {
 		if (blocks.length === 0) { return }
 		const el = scrollRef.current
 		if (!el) { return }
-		const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-		const nearBottom = distanceFromBottom < 300
 		const scrolledUp = lastScrollDirectionRef.current === 'up'
-		if (nearBottom && !scrolledUp) {
+		if (wasAtBottomRef.current && !scrolledUp) {
 			el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
 		}
 	}, [blocks])
@@ -270,6 +271,8 @@ export default function SentientUselessBoxProject() {
 		const now = Date.now()
 		sessionStartRef.current = now
 		lastTimestampRef.current = now
+		wasAtBottomRef.current = true
+		lastScrollDirectionRef.current = null
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt: preset.systemPrompt })
@@ -308,6 +311,8 @@ export default function SentientUselessBoxProject() {
 		}
 		sessionStartRef.current = Date.now()
 		lastTimestampRef.current = Date.now()
+		wasAtBottomRef.current = true
+		lastScrollDirectionRef.current = null
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt })
@@ -465,6 +470,7 @@ export default function SentientUselessBoxProject() {
 						lastScrollDirectionRef.current = 'up'
 					}
 					prevScrollTopRef.current = top
+					wasAtBottomRef.current = el.scrollHeight - top - el.clientHeight < 600
 				}}
 				className="h-64 sm:h-96 overflow-y-auto border border-border divide-y divide-border/40"
 			>
