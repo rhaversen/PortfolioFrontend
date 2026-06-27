@@ -15,8 +15,25 @@ export default function LlmBrainwashingProject() {
 	const [isStreaming, setIsStreaming] = useState(false)
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
 	const [copied, setCopied] = useState(false)
+	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
+	const [retryCountdown, setRetryCountdown] = useState(0)
 	const socketRef = useRef<Socket | null>(null)
 	const prefillRef = useRef<HTMLTextAreaElement | null>(null)
+
+	useEffect(() => {
+		if (rateLimitExpiresAt === null) return
+		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
+		const id = setInterval(() => {
+			const remaining = rateLimitExpiresAt - Date.now()
+			if (remaining <= 0) {
+				setRateLimitExpiresAt(null)
+				setRetryCountdown(0)
+			} else {
+				setRetryCountdown(Math.ceil(remaining / 1000))
+			}
+		}, 1000)
+		return () => clearInterval(id)
+	}, [rateLimitExpiresAt])
 
 	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
@@ -31,8 +48,12 @@ export default function LlmBrainwashingProject() {
 			setIsStreaming(false)
 		})
 
-		socket.on('brainwash:error', () => {
-			setGenerated('(error)')
+		socket.on('brainwash:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+			} else {
+				setGenerated('(error)')
+			}
 			setIsStreaming(false)
 		})
 
@@ -42,6 +63,7 @@ export default function LlmBrainwashingProject() {
 	function send() {
 		if (!userInput.trim() || isStreaming) return
 		setGenerated('')
+		setRateLimitExpiresAt(null)
 		setIsStreaming(true)
 		socketRef.current?.emit('brainwash:request', {
 			systemPrompt: systemPrompt.trim() || undefined,
@@ -75,6 +97,15 @@ export default function LlmBrainwashingProject() {
 	}
 
 	const showOverlay = isStreaming || generated !== ''
+
+	function formatCountdown(totalSeconds: number): string {
+		const hours = Math.floor(totalSeconds / 3600)
+		const minutes = Math.floor((totalSeconds % 3600) / 60)
+		const seconds = totalSeconds % 60
+		if (hours > 0) return `${hours}h ${minutes}m`
+		if (minutes > 0) return `${minutes}m ${seconds}s`
+		return `${seconds}s`
+	}
 
 	function applyPreset(index: number) {
 		if (isStreaming) cancel()
@@ -169,7 +200,7 @@ export default function LlmBrainwashingProject() {
 				<div className="flex flex-col gap-2 w-50">
 					<button
 						onClick={isStreaming ? cancel : send}
-						disabled={!isStreaming && !userInput.trim()}
+						disabled={(!isStreaming && !userInput.trim()) || rateLimitExpiresAt !== null}
 						className={`cursor-pointer shrink-0 border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${isStreaming ? 'border-red-500/60 text-red-400 hover:border-red-400' : 'border-border text-foreground hover:border-foreground/50'}`}
 					>
 						{isStreaming ? 'Cancel' : 'Send Message'}
@@ -183,6 +214,11 @@ export default function LlmBrainwashingProject() {
 					</button>
 				</div>
 			</div>
+			{rateLimitExpiresAt !== null && retryCountdown > 0 && (
+				<div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[0.7rem] font-mono text-amber-400">
+					Rate limit reached — try again in {formatCountdown(retryCountdown)}
+				</div>
+			)}
 		</div>
 	)
 }

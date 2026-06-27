@@ -12,11 +12,28 @@ export default function GhostWriterProject() {
 	const [loadingRows, setLoadingRows] = useState<Set<number>>(new Set())
 	const [focused, setFocused] = useState(false)
 	const [debug, setDebug] = useState(false)
+	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
+	const [retryCountdown, setRetryCountdown] = useState(0)
 
 	const socketRef = useRef<Socket | null>(null)
 	const charsRef = useRef('')
 	// Maps requestId → prefix length so chunks route to the right row
 	const requestMapRef = useRef(new Map<string, number>())
+
+	useEffect(() => {
+		if (rateLimitExpiresAt === null) return
+		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
+		const id = setInterval(() => {
+			const remaining = rateLimitExpiresAt - Date.now()
+			if (remaining <= 0) {
+				setRateLimitExpiresAt(null)
+				setRetryCountdown(0)
+			} else {
+				setRetryCountdown(Math.ceil(remaining / 1000))
+			}
+		}, 1000)
+		return () => clearInterval(id)
+	}, [rateLimitExpiresAt])
 
 	useEffect(() => {
 		const socket = io(process.env.NEXT_PUBLIC_WS_URL ?? '/')
@@ -34,10 +51,13 @@ export default function GhostWriterProject() {
 			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
 		})
 
-		socket.on('predict:error', ({ requestId }: { requestId: string }) => {
+		socket.on('predict:error', ({ requestId, retryAfterMs }: { requestId: string; retryAfterMs?: number }) => {
 			const idx = requestMapRef.current.get(requestId)
 			requestMapRef.current.delete(requestId)
 			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+			}
 		})
 
 		return () => { socket.disconnect() }
@@ -94,6 +114,15 @@ export default function GhostWriterProject() {
 		setChars('')
 		setGhosts({})
 		setLoadingRows(new Set())
+	}
+
+	function formatCountdown(totalSeconds: number): string {
+		const hours = Math.floor(totalSeconds / 3600)
+		const minutes = Math.floor((totalSeconds % 3600) / 60)
+		const seconds = totalSeconds % 60
+		if (hours > 0) return `${hours}h ${minutes}m`
+		if (minutes > 0) return `${minutes}m ${seconds}s`
+		return `${seconds}s`
 	}
 
 	return (
@@ -169,6 +198,11 @@ export default function GhostWriterProject() {
 					Clear
 				</button>
 			</div>
+			{rateLimitExpiresAt !== null && retryCountdown > 0 && (
+				<div className="border-t border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[0.7rem] font-mono text-amber-400">
+					Rate limit reached — try again in {formatCountdown(retryCountdown)}
+				</div>
+			)}
 			{debug && (
 				<div className="border-t border-border p-3 font-mono text-[0.65rem] text-foreground/60 space-y-1">
 					{Object.entries(ghosts)

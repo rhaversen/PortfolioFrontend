@@ -24,6 +24,8 @@ export default function SentientUselessBoxProject() {
 	const [isProcessing, setIsProcessing] = useState(false)
 	const [systemPrompt, setSystemPrompt] = useState(BOX_SYSTEM_PRESETS[0].systemPrompt)
 	const [selectedBoxPreset, setSelectedBoxPreset] = useState<number | null>(0)
+	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
+	const [retryCountdown, setRetryCountdown] = useState(0)
 	const systemPromptRef = useRef(BOX_SYSTEM_PRESETS[0].systemPrompt)
 	const socketRef = useRef<Socket | null>(null)
 	const historyRef = useRef<MessageParam[]>([])
@@ -104,6 +106,21 @@ export default function SentientUselessBoxProject() {
 	}, [flushQueue])
 
 	useEffect(() => {
+		if (rateLimitExpiresAt === null) return
+		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
+		const id = setInterval(() => {
+			const remaining = rateLimitExpiresAt - Date.now()
+			if (remaining <= 0) {
+				setRateLimitExpiresAt(null)
+				setRetryCountdown(0)
+			} else {
+				setRetryCountdown(Math.ceil(remaining / 1000))
+			}
+		}, 1000)
+		return () => clearInterval(id)
+	}, [rateLimitExpiresAt])
+
+	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
 		const socket = io(apiUrl)
 		socketRef.current = socket
@@ -137,7 +154,7 @@ export default function SentientUselessBoxProject() {
 			pendingActionsRef.current.push({ type: 'done', history })
 		})
 
-		socket.on('box:error', () => {
+		socket.on('box:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
 			segQueueRef.current = []
 			pendingActionsRef.current = []
 			if (drainIntervalRef.current !== null) {
@@ -145,6 +162,9 @@ export default function SentientUselessBoxProject() {
 				drainIntervalRef.current = null
 			}
 			setIsProcessing(false)
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+			}
 		})
 
 		return () => {
@@ -190,6 +210,15 @@ export default function SentientUselessBoxProject() {
 		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt: preset.systemPrompt })
+	}
+
+	function formatCountdown(totalSeconds: number): string {
+		const hours = Math.floor(totalSeconds / 3600)
+		const minutes = Math.floor((totalSeconds % 3600) / 60)
+		const seconds = totalSeconds % 60
+		if (hours > 0) return `${hours}h ${minutes}m`
+		if (minutes > 0) return `${minutes}m ${seconds}s`
+		return `${seconds}s`
 	}
 
 	function handleStop() {
@@ -312,7 +341,7 @@ export default function SentientUselessBoxProject() {
 			<div className="flex items-center gap-6 py-4 border-y border-border justify-between">
 				<button
 					onClick={handleToggle}
-					disabled={false}
+					disabled={rateLimitExpiresAt !== null}
 					aria-label={switchOn ? 'Turn switch off' : 'Turn switch on'}
 					className={`relative w-20 h-10 rounded-full border-2 transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
 						switchOn
@@ -333,6 +362,11 @@ export default function SentientUselessBoxProject() {
 					{isProcessing && (
 						<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted animate-pulse mt-0.5">
 							processing
+						</p>
+					)}
+					{rateLimitExpiresAt !== null && retryCountdown > 0 && (
+						<p className="text-[0.6rem] font-mono uppercase tracking-widest text-amber-400 mt-0.5">
+							rate limited — {formatCountdown(retryCountdown)}
 						</p>
 					)}
 				</div>
