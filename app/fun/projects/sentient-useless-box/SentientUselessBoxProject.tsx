@@ -118,6 +118,7 @@ export default function SentientUselessBoxProject() {
 		for (const action of actions) {
 			if (action.type === 'done') {
 				historyRef.current = action.history
+				lastTimestampRef.current = Date.now()
 				setBlocks((prev) => {
 					const last = prev[prev.length - 1]
 					if (last?.kind === 'text' && !last.done) {
@@ -359,10 +360,12 @@ export default function SentientUselessBoxProject() {
 			})
 		}
 
+		const elapsedMs = Date.now() - (lastTimestampRef.current || sessionStartRef.current)
 		socketRef.current?.emit('box:trigger', {
 			toggleState: newState,
 			history: historyRef.current,
 			systemPrompt,
+			elapsedMs,
 		})
 	}
 
