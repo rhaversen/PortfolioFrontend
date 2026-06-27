@@ -594,7 +594,7 @@ function WarmupCard({ countdown }: { countdown: number }) {
                 <span className="text-xs uppercase tracking-widest text-muted">Warmup</span>
                 <span className="text-2xl tabular-nums">{countdown}s</span>
             </div>
-            <p className="text-xs text-foreground/50">Letting the simulation stabilise before sampling begins…</p>
+            <p className="text-xs text-foreground/50">Letting the simulation stabilize before sampling begins…</p>
         </section>
     );
 }
