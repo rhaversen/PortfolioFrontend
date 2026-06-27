@@ -110,8 +110,9 @@ export default function LlmBrainwashingProject() {
 			</div>
 
 			<div className="border-b border-border">
-				<label className="block px-3 pt-2 pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">System Prompt (optional)</label>
+				<label htmlFor="system-prompt" className="block px-3 pt-2 pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">System Prompt (optional)</label>
 				<textarea
+					id="system-prompt"
 					value={systemPrompt}
 					onChange={(e) => setSystemPrompt(e.target.value)}
 					rows={4}
@@ -121,8 +122,9 @@ export default function LlmBrainwashingProject() {
 
 			<div className="px-4 pt-4 pb-2 flex justify-end items-end gap-2">
 				<div className="w-full sm:w-3/4 flex flex-col">
-					<label className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">User Message</label>
+					<label htmlFor="user-message" className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">User Message</label>
 					<textarea
+						id="user-message"
 						value={userInput}
 						onChange={(e) => { setUserInput(e.target.value) }}
 						onKeyDown={handleKeyDown}
@@ -135,7 +137,7 @@ export default function LlmBrainwashingProject() {
 
 			<div className="px-4 pt-2 pb-4 flex justify-start items-start gap-2">
 				<div className="w-full sm:w-3/4 flex flex-col">
-					<label className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">Assistant Prefill <span className="normal-case tracking-normal text-muted/40">(forced opening)</span></label>
+					<label htmlFor="assistant-prefill" className="pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">Assistant Prefill <span className="normal-case tracking-normal text-muted/40">(forced opening)</span></label>
 				<div
 					className="relative w-full border border-border cursor-text overflow-auto rounded-t-lg rounded-br-lg"
 					onClick={handleAssistantClick}
@@ -143,6 +145,7 @@ export default function LlmBrainwashingProject() {
 					style={showOverlay ? { minHeight: '16rem' } : undefined}
 				>
 					<textarea
+						id="assistant-prefill"
 						ref={prefillRef}
 						value={prefillInput}
 						onChange={(e) => setPrefillInput(e.target.value)}
