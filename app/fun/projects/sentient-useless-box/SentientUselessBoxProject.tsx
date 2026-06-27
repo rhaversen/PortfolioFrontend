@@ -173,6 +173,18 @@ export default function SentientUselessBoxProject() {
 		}
 	}, [blocks])
 
+	function handleStop() {
+		segQueueRef.current = []
+		pendingActionsRef.current = []
+		if (drainIntervalRef.current !== null) {
+			clearInterval(drainIntervalRef.current)
+			drainIntervalRef.current = null
+		}
+		setBlocks((prev) => prev.map((b) => b.kind === 'text' && !b.done ? { ...b, done: true } : b))
+		setIsProcessing(false)
+		socketRef.current?.emit('box:cancel')
+	}
+
 	function handleReset() {
 		setSwitchOn(false)
 		setIsProcessing(true)
@@ -285,13 +297,22 @@ export default function SentientUselessBoxProject() {
 						</p>
 					)}
 				</div>
-				<button
-					onClick={handleReset}
-					disabled={isProcessing}
-					className="border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-muted hover:text-foreground hover:border-foreground/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-				>
-					Reset
-				</button>
+				<div className="flex gap-2">
+					<button
+						onClick={handleStop}
+						disabled={!isProcessing}
+						className="border border-red-500/60 px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-red-400 hover:border-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					>
+						Stop
+					</button>
+					<button
+						onClick={handleReset}
+						disabled={isProcessing}
+						className="border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-muted hover:text-foreground hover:border-foreground/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					>
+						Reset
+					</button>
+				</div>
 			</div>
 
 			<div
