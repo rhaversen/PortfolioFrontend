@@ -66,6 +66,8 @@
         "ects",
         "STADS",
         "LWSS",
-        "letterfade"
+        "letterfade",
+        "Jank",
+        "longtask"
     ]
 }
