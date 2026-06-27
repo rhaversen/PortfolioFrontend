@@ -243,7 +243,16 @@ export default function GameOfLifeBg() {
 				<div className="relative flex flex-col items-end">
 					{showControls && (
 						<div className="absolute bottom-full mb-2 right-0 w-44 border border-border/20 bg-background/60 backdrop-blur-md p-3 space-y-3 text-[0.65rem] font-mono">
-							<span className="block text-muted text-[0.55rem] leading-relaxed">Conway&apos;s Game of Life background. Runs about as efficiently as scrolling Google search.</span>
+							<div className="flex justify-end mb-1">
+								<button
+									onClick={() => window.location.href = "/gol-bench"}
+									className="text-muted py-0.5 px-1 text-s cursor-pointer hover:text-foreground/70 hover:border-border/40 transition-colors"
+								>
+									Benchmark
+									<span aria-hidden="true" className="text-s">↗</span>
+								</button>
+							</div>
+							<span className="block text-muted text-s leading-relaxed">Conway&apos;s Game of Life background. Runs about as efficiently as scrolling Google search.</span>
 							<div className="space-y-1">
 								<div className="flex justify-between text-muted uppercase tracking-widest">
 									<span>Speed</span>
@@ -262,7 +271,7 @@ export default function GameOfLifeBg() {
 							</div>
 							<button
 								onClick={init}
-								className="w-full border border-border/20 text-muted py-0.5 uppercase tracking-widest text-[0.6rem] cursor-pointer hover:text-foreground/70 hover:border-border/40 transition-colors"
+								className="w-full border border-border/20 text-muted py-0.5 uppercase tracking-widest text-s cursor-pointer hover:text-foreground/70 hover:border-border/40 transition-colors"
 							>
 								New Game
 							</button>
