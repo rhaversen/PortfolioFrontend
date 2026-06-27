@@ -65,7 +65,7 @@ export default function ExamPingPongProject() {
 								onClick={reset}
 								className="absolute top-0 right-0 border border-border px-3 py-1 text-xs font-mono hover:bg-foreground/5 transition-colors bg-background/80"
 							>
-								↺ Reset
+								↺ Replay
 							</button>
 						</div>
 						<ExamTimelineViz nodes={nodes} simRef={simRef} simStart={simStart} simEnd={simEnd} />
@@ -99,7 +99,7 @@ export default function ExamPingPongProject() {
 						onClick={handleResetToPlaceholder}
 						className="border border-border px-3 py-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted hover:text-foreground hover:border-foreground/40 transition-colors"
 					>
-						Reset
+						Default
 					</button>
 					<button
 						type="button"
