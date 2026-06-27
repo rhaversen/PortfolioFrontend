@@ -15,6 +15,7 @@ export default function LlmBrainwashingProject() {
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
 	const [copied, setCopied] = useState(false)
 	const socketRef = useRef<Socket | null>(null)
+	const prefillRef = useRef<HTMLTextAreaElement | null>(null)
 
 	useEffect(() => {
 		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
@@ -48,6 +49,11 @@ export default function LlmBrainwashingProject() {
 		})
 	}
 
+	function cancel() {
+		socketRef.current?.emit('brainwash:cancel')
+		setIsStreaming(false)
+	}
+
 	function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault()
@@ -56,8 +62,14 @@ export default function LlmBrainwashingProject() {
 	}
 
 	function handleAssistantClick() {
-		if (!isStreaming && generated) {
+		if (isStreaming) {
+			cancel()
+		}
+		if (generated) {
 			setGenerated('')
+		}
+		if (isStreaming || generated) {
+			setTimeout(() => prefillRef.current?.focus(), 0)
 		}
 	}
 
@@ -126,6 +138,7 @@ export default function LlmBrainwashingProject() {
 					style={showOverlay ? { minHeight: '16rem' } : undefined}
 				>
 					<textarea
+						ref={prefillRef}
 						value={prefillInput}
 						onChange={(e) => setPrefillInput(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -147,11 +160,11 @@ export default function LlmBrainwashingProject() {
 				</div>
 				<div className="flex flex-col gap-2 w-50">
 					<button
-						onClick={send}
-						disabled={!userInput.trim() || isStreaming}
-						className="cursor-pointer shrink-0 border border-border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:border-foreground/50 transition-colors"
+						onClick={isStreaming ? cancel : send}
+						disabled={!isStreaming && !userInput.trim()}
+						className={`cursor-pointer shrink-0 border px-3 py-1.5 text-[0.65rem] font-mono uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${isStreaming ? 'border-red-500/60 text-red-400 hover:border-red-400' : 'border-border text-foreground hover:border-foreground/50'}`}
 					>
-						Send Message
+						{isStreaming ? 'Cancel' : 'Send Message'}
 					</button>
 					<button
 						onClick={copyResponse}
