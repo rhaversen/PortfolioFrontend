@@ -318,7 +318,9 @@ export default function GolBenchPage() {
         lastFrameTimeRef.current = now;
         rafIdRef.current = requestAnimationFrame(measureFrameRef.current!);
     }, []);
-    measureFrameRef.current = measureFrame;
+    useEffect(() => {
+        measureFrameRef.current = measureFrame;
+    }, [measureFrame]);
 
     const startBenchmark = useCallback(() => {
         if (statusRef.current !== "idle") return;
@@ -841,7 +843,7 @@ function ComparePanel({
 
             {runs.length === 0 ? (
                 <div className="border border-border/30 bg-background/60 backdrop-blur-sm p-8 text-center">
-                    <p className="text-xs text-foreground/30">No runs loaded. Upload JSON reports or use "Save to Compare" after a run.</p>
+                    <p className="text-xs text-foreground/30">No runs loaded. Upload JSON reports or use &ldquo;Save to Compare&rdquo; after a run.</p>
                 </div>
             ) : (
                 <div className="border border-border/30 bg-background/60 backdrop-blur-sm overflow-x-auto">
