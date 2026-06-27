@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { parseExamResults } from "./parser";
 import { useExamSim } from "./useExamSim";
 import ExamClockViz from "./ExamClockViz";
@@ -9,14 +9,46 @@ import ExamTimelineViz from "./ExamTimelineViz";
 import ExamUpcomingList from "./ExamUpcomingList";
 import { EXAM_PING_PONG_DEFAULT_INPUT } from "../sampleData";
 
+const COOKIE_KEY = "exam_ping_pong_input";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function saveToCookie(value: string) {
+	document.cookie = `${COOKIE_KEY}=${encodeURIComponent(value)}; max-age=${COOKIE_MAX_AGE}; path=/; SameSite=Lax`;
+}
+
+function loadFromCookie(): string | null {
+	const match = document.cookie.split("; ").find((row) => row.startsWith(`${COOKIE_KEY}=`));
+	return match ? decodeURIComponent(match.split("=").slice(1).join("=")) : null;
+}
+
 export default function ExamPingPongProject() {
-	const [rawInput, setRawInput] = useState(EXAM_PING_PONG_DEFAULT_INPUT);
+	const [rawInput, setRawInput] = useState(() => loadFromCookie() ?? EXAM_PING_PONG_DEFAULT_INPUT);
+	const [learnMoreOpen, setLearnMoreOpen] = useState(false);
+	const learnMoreRef = useRef<HTMLSpanElement>(null);
 	const parsed = useMemo(() => parseExamResults(rawInput), [rawInput]);
 	const { nodes, byId, simRef, simStart, simEnd, reset } = useExamSim(parsed.records);
+
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (learnMoreRef.current && !learnMoreRef.current.contains(e.target as Node)) {
+				setLearnMoreOpen(false);
+			}
+		};
+		if (learnMoreOpen) {
+			document.addEventListener("mousedown", handleClickOutside);
+		}
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [learnMoreOpen]);
 
 	const handlePaste = async () => {
 		const text = await navigator.clipboard.readText();
 		setRawInput(text);
+		saveToCookie(text);
+	};
+
+	const handleResetToPlaceholder = () => {
+		setRawInput(EXAM_PING_PONG_DEFAULT_INPUT);
+		document.cookie = `${COOKIE_KEY}=; max-age=0; path=/; SameSite=Lax`;
 	};
 
 	return (
@@ -61,6 +93,14 @@ export default function ExamPingPongProject() {
 					<p className="text-[0.68rem] font-mono uppercase tracking-widest text-muted">
 						{parsed.records.length} parsed / {parsed.skippedSegments} skipped
 					</p>
+						<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={handleResetToPlaceholder}
+						className="border border-border px-3 py-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted hover:text-foreground hover:border-foreground/40 transition-colors"
+					>
+						Reset
+					</button>
 					<button
 						type="button"
 						onClick={handlePaste}
@@ -68,11 +108,30 @@ export default function ExamPingPongProject() {
 					>
 						Paste
 					</button>
+					</div>
 				</div>
+
+				<p className="text-[0.65rem] font-mono text-muted">
+					By pasting into this field you agree to the use of non-functional cookies.{" "}
+					<span ref={learnMoreRef} className="relative inline-block">
+						<button
+							type="button"
+							onClick={() => setLearnMoreOpen((prev) => !prev)}
+							className="underline underline-offset-2 cursor-pointer hover:text-foreground transition-colors"
+						>
+							Learn more
+						</button>
+						{learnMoreOpen && (
+							<span className="absolute top-full left-0 mt-2 w-64 rounded border border-border bg-background p-3 text-[0.65rem] font-mono text-foreground shadow-md z-50 block">
+								This data is stored exclusively in a cookie on your device. It is never transmitted to or read by any server.
+							</span>
+						)}
+					</span>
+				</p>
 
 				<textarea
 					value={rawInput}
-					onChange={(event) => setRawInput(event.target.value)}
+					onChange={(event) => { setRawInput(event.target.value); saveToCookie(event.target.value); }}
 					placeholder="Paste exam results here..."
 					className="w-full min-h-56 border border-border bg-transparent p-3 text-sm leading-relaxed"
 				/>
