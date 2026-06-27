@@ -25,7 +25,6 @@ export default function SentientUselessBoxProject() {
 	const socketRef = useRef<Socket | null>(null)
 	const historyRef = useRef<MessageParam[]>([])
 	const scrollRef = useRef<HTMLDivElement>(null)
-	const endRef = useRef<HTMLDivElement>(null)
 	const idRef = useRef(0)
 	const initialSentRef = useRef(false)
 	const sessionStartRef = useRef<number>(0)
@@ -170,7 +169,7 @@ export default function SentientUselessBoxProject() {
 		const nearBottom = distanceFromBottom < 300
 		const scrolledUp = lastScrollDirectionRef.current === 'up'
 		if (nearBottom && !scrolledUp) {
-			endRef.current?.scrollIntoView({ behavior: 'smooth' })
+			el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
 		}
 	}, [blocks])
 
@@ -377,7 +376,6 @@ export default function SentientUselessBoxProject() {
 						}
 						return null
 					})}
-					<div ref={endRef} />
 					</>
 				)}
 			</div>
