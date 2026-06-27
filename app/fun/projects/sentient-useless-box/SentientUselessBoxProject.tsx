@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -17,6 +17,67 @@ type Block =
 
 type PendingAction = { type: 'done'; history: MessageParam[] }
 type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: BoxAction; ts: string }
+
+const BOX_TOOL_LABELS: Record<BoxAction, string> = {
+	turn_off: 'Turn off',
+	turn_on: 'Turn on',
+}
+
+const UserBlock = memo(function UserBlock({ block }: { block: Extract<Block, { kind: 'user' }> }) {
+	return (
+		<div className="px-4 py-3 bg-border/10">
+			<div className="flex items-center justify-between mb-1.5">
+				<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Event</p>
+				<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
+			</div>
+			<p className="text-xs font-mono text-foreground/70">{block.text}</p>
+		</div>
+	)
+})
+
+const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { kind: 'tool' }> }) {
+	const accent =
+		block.name === 'turn_off'
+			? 'border-foreground text-foreground'
+			: 'border-foreground/60 text-foreground/70'
+	return (
+		<div className="px-4 py-3 bg-background/60">
+			<div className="flex items-center justify-between mb-2">
+				<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Tool call</p>
+				<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
+			</div>
+			<span className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
+				{BOX_TOOL_LABELS[block.name]}
+			</span>
+		</div>
+	)
+})
+
+const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { kind: 'text' }> }) {
+	return (
+		<div className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
+			<div className="markdown-body">
+				{!block.done ? (
+					block.text.split('\n\n').map((para, i, arr) => {
+						const isLast = i === arr.length - 1
+						return (
+							<p key={i}>
+								{isLast ? para.slice(0, -1) : para}
+								{isLast && para.length > 0 && (
+									<span key={block.text.length} className="animate-letter-fade">
+										{para.slice(-1)}
+									</span>
+								)}
+							</p>
+						)
+					})
+				) : (
+					<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
+				)}
+			</div>
+		</div>
+	)
+})
 
 export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
@@ -410,64 +471,9 @@ export default function SentientUselessBoxProject() {
 				) : (
 					<>
 					{blocks.map((block) => {
-						if (block.kind === 'user') {
-							return (
-								<div key={block.id} className="px-4 py-3 bg-border/10">
-									<div className="flex items-center justify-between mb-1.5">
-										<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Event</p>
-										<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
-									</div>
-									<p className="text-xs font-mono text-foreground/70">{block.text}</p>
-								</div>
-							)
-						}
-						if (block.kind === 'text') {
-							return (
-								<div key={block.id} className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
-									<div className="markdown-body">
-										{!block.done ? (
-											block.text.split('\n\n').map((para, i, arr) => {
-												const isLast = i === arr.length - 1
-												return (
-													<p key={i}>
-														{isLast ? para.slice(0, -1) : para}
-														{isLast && para.length > 0 && (
-															<span key={block.text.length} className="animate-letter-fade">
-																{para.slice(-1)}
-															</span>
-														)}
-													</p>
-												)
-											})
-										) : (
-											<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
-										)}
-									</div>
-								</div>
-							)
-						}
-						if (block.kind === 'tool') {
-							const labels: Record<BoxAction, string> = {
-								turn_off: 'Turn off',
-								turn_on: 'Turn on',
-							}
-							const accent =
-								block.name === 'turn_off'
-									? 'border-foreground text-foreground'
-									: 'border-foreground/60 text-foreground/70'
-
-							return (
-								<div key={block.id} className="px-4 py-3 bg-background/60">
-								<div className="flex items-center justify-between mb-2">
-									<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Tool call</p>
-									<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
-								</div>
-									<span className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
-										{labels[block.name]}
-									</span>
-								</div>
-							)
-						}
+						if (block.kind === 'user') return <UserBlock key={block.id} block={block} />
+						if (block.kind === 'text') return <TextBlock key={block.id} block={block} />
+						if (block.kind === 'tool') return <ToolBlock key={block.id} block={block} />
 						return null
 					})}
 					</>
