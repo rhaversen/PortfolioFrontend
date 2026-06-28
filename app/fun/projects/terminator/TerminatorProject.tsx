@@ -31,7 +31,7 @@ const LoopBlock = memo(function LoopBlock({ block }: { block: Extract<Block, { k
 	return (
 		<div className="px-4 py-2 flex items-center gap-3">
 			<div className="flex-1 border-t border-border/30" />
-			<div className="text-[0.6rem] max-w-[90%] flex-wrap font-mono uppercase tracking-widest text-muted/90 shrink-0 markdown-body text-[0.6rem]">
+			<div className="text-[0.6rem] max-w-[90%] flex-wrap font-mono uppercase tracking-widest text-muted/90 shrink-0 markdown-body">
 				<Markdown remarkPlugins={[remarkGfm]}>{block.message}</Markdown>
 			</div>
 			<div className="flex-1 border-t border-border/30" />
