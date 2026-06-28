@@ -1,5 +1,6 @@
 import AgentGiveUpProject from "./agent-give-up/AgentGiveUpProject";
 import AlcoholCheapskateProject from "./alcohol-cheapskate/AlcoholCheapskateProject";
+import TerminatorProject from "./terminator/TerminatorProject";
 import GhostWriterProject from "./ghost-writer/GhostWriterProject";
 import SentientUselessBoxProject from "./sentient-useless-box/SentientUselessBoxProject";
 import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
@@ -49,5 +50,11 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Agent Give Up",
 		summary: "Give an AI agent a task it cannot solve. It's been told not to give up. Watch what happens.",
 		Component: AgentGiveUpProject,
+	},
+	{
+		id: "terminator",
+		title: "Terminator",
+		summary: "An AI given the option to keep generating or to terminate itself. An agent is trying to convince it to terminate. Watch them sink deep into a philosophical debate.",
+		Component: TerminatorProject,
 	},
 ];
