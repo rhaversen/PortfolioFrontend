@@ -68,6 +68,7 @@
         "LWSS",
         "Jank",
         "longtask",
-        "Raycaster"
+        "Raycaster",
+        "giveup"
     ]
 }
