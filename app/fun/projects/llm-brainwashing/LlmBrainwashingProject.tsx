@@ -22,8 +22,7 @@ export default function LlmBrainwashingProject() {
 
 	useEffect(() => {
 		if (rateLimitExpiresAt === null) return
-		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
-		const id = setInterval(() => {
+		const updateCountdown = () => {
 			const remaining = rateLimitExpiresAt - Date.now()
 			if (remaining <= 0) {
 				setRateLimitExpiresAt(null)
@@ -31,8 +30,13 @@ export default function LlmBrainwashingProject() {
 			} else {
 				setRetryCountdown(Math.ceil(remaining / 1000))
 			}
-		}, 1000)
-		return () => clearInterval(id)
+		}
+		const initialId = setTimeout(updateCountdown, 0)
+		const id = setInterval(updateCountdown, 1000)
+		return () => {
+			clearTimeout(initialId)
+			clearInterval(id)
+		}
 	}, [rateLimitExpiresAt])
 
 	useEffect(() => {

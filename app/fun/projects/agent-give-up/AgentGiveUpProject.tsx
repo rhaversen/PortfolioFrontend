@@ -67,12 +67,9 @@ export default function AgentGiveUpProject() {
 	const prevScrollTopRef = useRef(0)
 	const finalPhaseRef = useRef<Phase | null>(null)
 
-	const getId = () => String(idRef.current++)
-
 	useEffect(() => {
 		if (rateLimitExpiresAt === null) return
-		setRetryCountdown(Math.ceil((rateLimitExpiresAt - Date.now()) / 1000))
-		const id = setInterval(() => {
+		const updateCountdown = () => {
 			const remaining = rateLimitExpiresAt - Date.now()
 			if (remaining <= 0) {
 				setRateLimitExpiresAt(null)
@@ -80,8 +77,13 @@ export default function AgentGiveUpProject() {
 			} else {
 				setRetryCountdown(Math.ceil(remaining / 1000))
 			}
-		}, 1000)
-		return () => clearInterval(id)
+		}
+		const initialId = setTimeout(updateCountdown, 0)
+		const id = setInterval(updateCountdown, 1000)
+		return () => {
+			clearTimeout(initialId)
+			clearInterval(id)
+		}
 	}, [rateLimitExpiresAt])
 
 	const stopDrain = useCallback(() => {
@@ -166,7 +168,7 @@ export default function AgentGiveUpProject() {
 			if (drainIntervalRef.current === null) commitFinalPhase()
 		})
 
-		socket.on('giveup:error', ({ error, retryAfterMs }: { error: string; retryAfterMs?: number }) => {
+		socket.on('giveup:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
 			stopDrain()
 			segQueueRef.current = []
 			finalPhaseRef.current = null
