@@ -141,7 +141,7 @@ function pruneToLimit(root: TreeNode, max: number): void {
 	const inOrder: TreeNode[] = [];
 
 	while (queue.length > 0) {
-		const { node, parent: _parent } = queue.shift()!;
+		const { node } = queue.shift()!;
 		inOrder.push(node);
 		for (const child of node.children) {
 			queue.push({ node: child, parent: node });
