@@ -69,6 +69,7 @@
         "Jank",
         "longtask",
         "Raycaster",
-        "giveup"
+        "giveup",
+        "oneword"
     ]
 }
