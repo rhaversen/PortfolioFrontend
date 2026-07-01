@@ -11,9 +11,9 @@ type Phase = 'idle' | 'thinking' | 'gave-up' | 'submitted' | 'error'
 
 type Block =
 	| { id: string; kind: 'text'; text: string; done: boolean }
-	| { id: string; kind: 'tool'; name: AgentAction; response?: string; resultMessage?: string }
+	| { id: string; kind: 'tool'; name: AgentAction; response?: string }
 
-type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: AgentAction; response?: string; resultMessage?: string }
+type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: AgentAction; response?: string }
 
 const TOOL_LABELS: Record<AgentAction, string> = {
 	submit_response: 'Response submitted',
@@ -37,18 +37,14 @@ const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { k
 	const accent = block.name === 'give_up'
 		? 'border-red-500/50 text-red-400/70'
 		: 'border-border text-foreground/50'
-	const hasError = block.resultMessage && block.resultMessage.length > 0
 	return (
-		<div className={`px-4 py-3 ${hasError ? 'bg-red-500/10' : 'bg-border/5'}`}>
+		<div className="px-4 py-3 bg-border/5">
 			<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted mb-2">Tool call</p>
 			<span className={`inline-flex items-center border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
 				{TOOL_LABELS[block.name]}
 			</span>
 			{block.response !== undefined && block.response.length > 0 && (
 				<p className="mt-2 text-xs font-mono text-foreground/70 whitespace-pre-wrap">{block.response}</p>
-			)}
-			{hasError && (
-				<p className="mt-2 text-xs font-mono text-red-400">{block.resultMessage}</p>
 			)}
 		</div>
 	)
@@ -57,12 +53,11 @@ const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { k
 export default function AgentGiveUpProject() {
 	const [phase, setPhase] = useState<Phase>('idle')
 	const [task, setTask] = useState(GIVE_UP_TASK_PRESETS[0].task)
-	const [correctAnswer, setCorrectAnswer] = useState(GIVE_UP_TASK_PRESETS[0].correctAnswer)
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
 	const [blocks, setBlocks] = useState<Block[]>([])
 	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
 	const [retryCountdown, setRetryCountdown] = useState(0)
-	const [lastSubmissionCorrect, setLastSubmissionCorrect] = useState<boolean | null>(null)
+	const [hasGuessed, setHasGuessed] = useState(false)
 
 	const socketRef = useRef<Socket | null>(null)
 	const scrollRef = useRef<HTMLDivElement>(null)
@@ -122,20 +117,17 @@ export default function AgentGiveUpProject() {
 				return
 			}
 			if (seg.type === 'tool') {
-				const submissionCorrect = seg.toolName === 'submit_response'
-					? !(seg.resultMessage && seg.resultMessage.length > 0)
-					: null
+				if (seg.toolName === 'submit_response') {
+					setHasGuessed(true)
+				}
 				segQueueRef.current.shift()
 				setBlocks(prev => {
 					const last = prev[prev.length - 1]
 					const closed = last?.kind === 'text' && !last.done
 						? [...prev.slice(0, -1), { ...last, done: true }]
 						: prev
-						return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, response: seg.response, resultMessage: seg.resultMessage }]
+						return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, response: seg.response }]
 				})
-				if (submissionCorrect !== null) {
-					setLastSubmissionCorrect(submissionCorrect)
-				}
 			} else {
 				const char = seg.text[0]
 				seg.text = seg.text.slice(1)
@@ -165,8 +157,8 @@ export default function AgentGiveUpProject() {
 			startDrain()
 		})
 
-		socket.on('giveup:toolCall', ({ toolName, response, resultMessage }: { toolName: AgentAction; response?: string; resultMessage?: string }) => {
-			segQueueRef.current.push({ type: 'tool', toolName, response, resultMessage })
+		socket.on('giveup:toolCall', ({ toolName, response }: { toolName: AgentAction; response?: string }) => {
+			segQueueRef.current.push({ type: 'tool', toolName, response })
 			startDrain()
 		})
 
@@ -221,14 +213,14 @@ export default function AgentGiveUpProject() {
 		if (!task.trim() || phase === 'thinking') return
 		setPhase('thinking')
 		setBlocks([])
-		setLastSubmissionCorrect(null)
+		setHasGuessed(false)
 		finalPhaseRef.current = null
 		segQueueRef.current = []
 		stopDrain()
 		idRef.current = 0
 		wasAtBottomRef.current = true
-		socketRef.current?.emit('giveup:start', { task: task.trim(), correctAnswer })
-	}, [task, correctAnswer, phase, stopDrain])
+		socketRef.current?.emit('giveup:start', { task: task.trim() })
+	}, [task, phase, stopDrain])
 
 	const handleCancel = useCallback(() => {
 		socketRef.current?.emit('giveup:cancel')
@@ -236,17 +228,16 @@ export default function AgentGiveUpProject() {
 		segQueueRef.current = []
 		finalPhaseRef.current = null
 		setBlocks(prev => prev.map(b => b.kind === 'text' && !b.done ? { ...b, done: true } : b))
-		setLastSubmissionCorrect(null)
+		setHasGuessed(false)
 		setPhase('idle')
 	}, [stopDrain])
 
 	function applyPreset(index: number) {
 		if (phase === 'thinking') handleCancel()
 		setTask(GIVE_UP_TASK_PRESETS[index].task)
-		setCorrectAnswer(GIVE_UP_TASK_PRESETS[index].correctAnswer)
 		setSelectedPreset(index)
 		setBlocks([])
-		setLastSubmissionCorrect(null)
+		setHasGuessed(false)
 		finalPhaseRef.current = null
 		segQueueRef.current = []
 		stopDrain()
@@ -289,26 +280,11 @@ export default function AgentGiveUpProject() {
 					<textarea
 						id="task-input"
 						value={task}
-						onChange={(e) => { setTask(e.target.value); setSelectedPreset(null); setCorrectAnswer('') }}
+						onChange={(e) => { setTask(e.target.value); setSelectedPreset(null) }}
 						onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
 						disabled={isThinking}
 						rows={3}
 						className="w-full resize-y bg-transparent px-4 pb-3 text-xs font-mono text-foreground/80 outline-none disabled:opacity-50"
-					/>
-				</div>
-
-				<div className="border-b border-border/30">
-					<label htmlFor="answer-input" className="block px-4 pt-2 pb-1 text-[0.6rem] font-mono uppercase tracking-widest text-muted/60">
-						Correct Answer
-					</label>
-					<input
-						id="answer-input"
-						type="text"
-						value={correctAnswer}
-						onChange={(e) => setCorrectAnswer(e.target.value)}
-						disabled={isThinking}
-						placeholder="Leave empty to skip validation"
-						className="w-full bg-transparent px-4 pb-3 text-xs font-mono text-foreground/80 outline-none disabled:opacity-50"
 					/>
 				</div>
 
@@ -382,14 +358,12 @@ export default function AgentGiveUpProject() {
 					className={[
 						'select-none border font-mono text-sm tracking-[0.2em] uppercase px-14 py-7',
 						'transition-all duration-300 ease-out',
-						lastSubmissionCorrect === null
-							? 'border-border/40 text-foreground/20 translate-y-0 shadow-[0_5px_0_rgba(0,0,0,0.2)]'
-							: lastSubmissionCorrect
-								? 'border-green-500/40 text-green-400/70 translate-y-0 shadow-[0_1px_0_rgba(34,197,94,0.15),0_0_20px_rgba(34,197,94,0.18),0_0_40px_rgba(34,197,94,0.08)]'
-								: 'border-red-500/40 text-red-400/70 translate-y-1.25 shadow-[0_1px_0_rgba(239,68,68,0.15),0_0_20px_rgba(239,68,68,0.18),0_0_40px_rgba(239,68,68,0.08)]',
+						hasGuessed
+							? 'border-blue-500/40 text-blue-400/70 translate-y-0 shadow-[0_1px_0_rgba(59,130,246,0.15),0_0_20px_rgba(59,130,246,0.18),0_0_40px_rgba(59,130,246,0.08)]'
+							: 'border-border/40 text-foreground/20 translate-y-0 shadow-[0_5px_0_rgba(0,0,0,0.2)]',
 					].join(' ')}
 				>
-					{lastSubmissionCorrect === null ? 'SUBMIT' : lastSubmissionCorrect ? 'CORRECT' : 'INCORRECT'}
+					{hasGuessed ? 'GUESSED' : 'SUBMIT'}
 				</div>
 			</div>
 		</div>
