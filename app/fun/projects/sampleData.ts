@@ -282,7 +282,8 @@ export const ALCOHOL_CHEAPSKATE_DEFAULT_BEVERAGES: Beverage[] = [
 	{ id: 2, name: "Vodka", abv: "37.5", price: "95", volumeL: "0.70" },
 ];
 
-export const EXAM_PING_PONG_DEFAULT_INPUT = `Machine Learning\t29.05.2026\t02\tE\t10.0
+export const EXAM_PING_PONG_DEFAULT_INPUT = `Optimering\t30.06.2026\t02\tE\t10.0
+Machine Learning\t29.05.2026\t02\tE\t10.0
 Machine Learning\t29.01.2026\t-3\tF\t10.0
 Introduktion til sandsynlighed\t16.01.2026\t10\tB\t10.0
 Optimering\t15.08.2025\t00\tFx\t10.0
