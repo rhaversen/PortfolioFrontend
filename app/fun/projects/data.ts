@@ -46,12 +46,12 @@ export const SIDE_PROJECTS: SideProject[] = [
 		summary: "Paste any public GitHub repo and watch its commit history unfold.",
 		Component: AnimatedCommitsProject,
 	},
-	{
+/**	{
 		id: "agent-give-up",
 		title: "Agent Give Up",
 		summary: "Give an AI agent a task it cannot solve. It's been told not to give up. Watch what happens.",
 		Component: AgentGiveUpProject,
-	},
+	},  */
 	{
 		id: "terminator",
 		title: "Terminator",
