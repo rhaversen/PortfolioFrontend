@@ -6,6 +6,7 @@ import SentientUselessBoxProject from "./sentient-useless-box/SentientUselessBox
 import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
+import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -56,5 +57,11 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Terminator",
 		summary: "An AI given the option to keep generating or to terminate itself. An agent is trying to convince it to terminate. Watch them sink deep into a philosophical debate.",
 		Component: TerminatorProject,
+	},
+	{
+		id: "one-word-story",
+		title: "One Word Story",
+		summary: "You and an AI write a story together, one word at a time. It only ever sees what's been written so far — and only ever gets to add one word back.",
+		Component: OneWordStoryProject,
 	},
 ];

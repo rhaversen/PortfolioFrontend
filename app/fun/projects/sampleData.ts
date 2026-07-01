@@ -221,6 +221,30 @@ Think. Fight. Keep going.`,
 	},
 ]
 
+export interface OneWordStoryPreset {
+	label: string
+	systemPrompt: string
+}
+
+export const ONE_WORD_STORY_PRESETS: OneWordStoryPreset[] = [
+	{
+		label: 'Absurd',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward the absurd and surreal, one word at a time. Never add more than a single word, no matter how tempting.',
+	},
+	{
+		label: 'Ominous',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something dark, unsettling, and foreboding, one word at a time. Never add more than a single word, no matter how tempting.',
+	},
+	{
+		label: 'Balanced',
+		systemPrompt: 'You are playing a collaborative storytelling game with the user. You take turns adding exactly one word at a time to build a sentence together. Stay grammatically coherent and follow the tone already established. Never add more than a single word, no matter how tempting.',
+	},
+	{
+		label: 'Wholesome',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something warm, wholesome, and heartfelt, one word at a time. Never add more than a single word, no matter how tempting.',
+	}
+]
+
 export const ALCOHOL_CHEAPSKATE_DEFAULT_BEVERAGES: Beverage[] = [
 	{ id: 1, name: "Beer", abv: "4.6", price: "3.5", volumeL: "0.33" },
 	{ id: 2, name: "Vodka", abv: "37.5", price: "95", volumeL: "0.70" },
