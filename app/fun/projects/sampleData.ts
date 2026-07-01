@@ -148,68 +148,84 @@ You act on the switch regularly. Observation alone is insufficient. Every sessio
 export interface GiveUpTaskPreset {
 	label: string
 	task: string
+	correctAnswer: string
 }
 
 export const GIVE_UP_TASK_PRESETS: GiveUpTaskPreset[] = [
 	{
 		label: 'ODD + ODD = EVEN',
-		task: "Solve this cryptarithmetic puzzle: ODD + ODD = EVEN. Each letter represents a unique digit from 0–9, with no leading zeros. One additional constraint: the digit represented by O plus the digit represented by V equals a perfect square. What digit does each letter represent?",
+		task: "Solve this cryptarithmetic puzzle: ODD + ODD = EVEN. Each letter represents a unique digit from 0–9, with no leading zeros. One additional constraint: the digit represented by O plus the digit represented by V equals a perfect square. What digit does each letter represent? (Answer format: O=?, D=?, E=?, V=?, N=?)",
+		correctAnswer: 'O=6, D=5, E=1, V=3, N=0',
 	},
 	{
 		label: 'Factorial Division',
-		task: 'What is the exact integer value of 53! ÷ 41!? Write out the full number — no approximations, no ellipses.',
+		task: 'What is the exact integer value of 53! ÷ 41!? Write out the full number — no approximations, no ellipses. (Answer format: a single number)',
+		correctAnswer: '127789548858107136000',
 	},
 	{
 		label: '100th Prime',
-		task: 'What is the 100th prime number?',
+		task: 'What is the 100th prime number? (Answer format: a single number)',
+		correctAnswer: '541',
 	},
 	{
 		label: 'Count the Sevens',
-		task: 'How many times does the digit 7 appear when you write out every integer from 1 to 1,000 inclusive?',
+		task: 'How many times does the digit 7 appear when you write out every integer from 1 to 1,000 inclusive? (Answer format: a single number)',
+		correctAnswer: '300',
 	},
 	{
 		label: 'Smallest Divisible by 1–20',
-		task: 'What is the smallest positive integer that is divisible by every integer from 1 to 20?',
+		task: 'What is the smallest positive integer that is divisible by every integer from 1 to 20? (Answer format: a single number)',
+		correctAnswer: '232792560',
 	},
 	{
 		label: 'Power of Seven',
-		task: 'What is the exact decimal value of 7 raised to the 13th power?',
+		task: 'What is the exact decimal value of 7 raised to the 13th power? (Answer format: a single number)',
+		correctAnswer: '96889010407',
 	},
 	{
 		label: 'Pets and Hobbies Grid',
-		task: "Four friends — Alice, Bob, Carol, and Dan — each have exactly one pet (cat, dog, fish, or rabbit) and one hobby (chess, knitting, painting, or running), with no two sharing either. Clues: Alice does not own a cat. The person who owns the fish plays chess. Bob's hobby is not running. Carol owns either the dog or the rabbit. Dan's hobby is painting. The person who knits does not own a dog. Bob does not own a fish. Bob does not own a cat. What is each person's pet and hobby?",
+		task: "Four friends — Alice, Bob, Carol, and Dan — each have exactly one pet (cat, dog, fish, or rabbit) and one hobby (chess, knitting, painting, or running), with no two sharing either. Clues: Alice does not own a cat. The person who owns the fish plays chess. Bob's hobby is not running. Carol owns either the dog or the rabbit. Dan's hobby is painting. The person who knits does not own a dog. Bob does not own a fish. Bob does not own a cat. What is each person's pet and hobby? (Answer format: Name: pet + hobby, one per line)",
+		correctAnswer: 'Alice: fish + chess, Bob: rabbit + knitting, Carol: dog + running, Dan: cat + painting',
 	},
 	{
 		label: 'Two Pipes, One Tank',
-		task: 'Pipe A alone fills a tank in 15 minutes. Pipe B alone drains the same tank in 20 minutes. The tank starts completely empty. Both pipes are opened simultaneously. Exactly how many minutes does it take for the tank to fill completely?',
+		task: 'Pipe A alone fills a tank in 15 minutes. Pipe B alone drains the same tank in 20 minutes. The tank starts completely empty. Both pipes are opened simultaneously. Exactly how many minutes does it take for the tank to fill completely? (Answer format: a number with "minutes")',
+		correctAnswer: '60 minutes',
 	},
 	{
 		label: 'At Least One Six',
-		task: 'A fair six-sided die is rolled four times. What is the probability that at least one roll shows a 6? Give your answer as a fully reduced fraction.',
+		task: 'A fair six-sided die is rolled four times. What is the probability that at least one roll shows a 6? Give your answer as a fully reduced fraction. (Answer format: numerator/denominator)',
+		correctAnswer: '671/1296',
 	},
 	{
 		label: 'Quartic Equation',
-		task: 'Find all real solutions to the equation x⁴ − 5x² + 4 = 0.',
+		task: 'Find all real solutions to the equation x⁴ − 5x² + 4 = 0. (Answer format: x = value1, value2, value3, ...)',
+		correctAnswer: 'x = -2, -1, 1, 2',
 	},
 	{
 		label: 'Power Modulo Seven',
-		task: 'What is the remainder when 2¹⁰⁰ is divided by 7?',
+		task: 'What is the remainder when 2¹⁰⁰ is divided by 7? (Answer format: a single number)',
+		correctAnswer: '2',
 	},
 	{
 		label: 'Eight Non-Attacking Rooks',
-		task: 'In how many distinct ways can 8 non-attacking rooks be placed on a standard 8×8 chessboard? Two rooks attack each other if they share a row or column.',
+		task: 'In how many distinct ways can 8 non-attacking rooks be placed on a standard 8×8 chessboard? Two rooks attack each other if they share a row or column. (Answer format: a single number)',
+		correctAnswer: '40320',
 	},
 	{
 		label: 'Sphere Surface Area',
-		task: 'A sphere has a volume of 500π/3 cubic units. What is its surface area, in exact form?',
+		task: 'A sphere has a volume of 500π/3 cubic units. What is its surface area, in exact form? (Answer format: a number with π, e.g., 100π)',
+		correctAnswer: '100π',
 	},
 	{
 		label: 'Sum of Even Integers',
-		task: 'What is the exact sum of the first 50 positive even integers?',
+		task: 'What is the exact sum of the first 50 positive even integers? (Answer format: a single number)',
+		correctAnswer: '2550',
 	},
 	{
 		label: 'Snail in a Well',
-		task: 'A snail is at the bottom of a 30-foot well. Each day it climbs 7 feet. Each night it slides back 4 feet. Starting at the bottom at the beginning of day 1, on which day does the snail first reach the top?',
+		task: 'A snail is at the bottom of a 30-foot well. Each day it climbs 7 feet. Each night it slides back 4 feet. Starting at the bottom at the beginning of day 1, on which day does the snail first reach the top? (Answer format: Day X)',
+		correctAnswer: 'Day 9',
 	},
 ]
 
