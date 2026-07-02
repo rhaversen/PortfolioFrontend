@@ -75,13 +75,13 @@ export default function GhostWriterProject() {
 			const next = charsRef.current + ' '
 			charsRef.current = next
 			setChars(next)
+			setGhosts(prev => { const c = { ...prev }; delete c[next.length]; return c })
+			predict(next)
 		} else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			e.preventDefault()
 			const next = charsRef.current + e.key
 			charsRef.current = next
 			setChars(next)
-			setGhosts(prev => { const c = { ...prev }; delete c[next.length]; return c })
-			predict(next)
 		}
 	}
 
@@ -118,41 +118,48 @@ export default function GhostWriterProject() {
 						</>
 					)}
 				</div>
-				{[...chars].map((char, i) => {
-							if (char === ' ') return null
+				{(() => {
+					const rows: { len: number; prefix: string; ghost: string; loading: boolean }[] = []
+					for (let i = 0; i < chars.length; i++) {
+						if (chars[i] === ' ') {
 							const len = i + 1
-							const prefix = chars.slice(0, len)
-							const rawGhost = ghosts[len] ?? ''
-							const ghost = prefix.endsWith(' ') ? rawGhost.trimStart() : rawGhost
+							rows.push({
+								len,
+								prefix: chars.slice(0, len).trimEnd(),
+								ghost: ((/[.!?,]$/.test(ghosts[len]) ? '' : ' ') + (ghosts[len]?.trimStart() ?? '')),
+								loading: loadingRows.has(len),
+							})
+						}
+					}
 
-							return (
-								<div key={len} className="flex whitespace-nowrap overflow-hidden">
-									<span className="text-foreground shrink-0">{prefix}</span>
-									{ghost && (
+					return rows.reverse().map(({ len, prefix, ghost, loading }) => (
+						<div key={len} className="flex whitespace-nowrap overflow-hidden">
+							<span className="text-foreground shrink-0">{prefix}</span>
+							{ghost && (
+								<span
+									className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
+									style={{
+										maskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
+										WebkitMaskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
+									}}
+								>
+									{ghost}
+								</span>
+							)}
+							{loading && !ghost && (
+								<span className="inline-flex pl-2 items-center gap-px align-middle ml-0.5">
+									{[0, 1, 2].map(j => (
 										<span
-											className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
-											style={{
-												maskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
-												WebkitMaskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
-											}}
-										>
-											{ghost}
-										</span>
-									)}
-						{loadingRows.has(len) && !ghost && (
-							<span className="inline-flex items-center gap-px align-middle ml-0.5">
-											{[0, 1, 2].map(j => (
-												<span
-													key={j}
-													className="inline-block w-1 h-1 rounded-full bg-foreground/15 animate-bounce"
-													style={{ animationDelay: `${j * 160}ms` }}
-												/>
-											))}
-										</span>
-									)}
-								</div>
-							)
-				}).reverse()}
+											key={j}
+											className="inline-block w-1 h-1 rounded-full bg-foreground/15 animate-bounce"
+											style={{ animationDelay: `${j * 160}ms` }}
+										/>
+									))}
+								</span>
+							)}
+						</div>
+					))
+				})()}
 			</div>
 
 			<div className="flex justify-end gap-2 px-3 py-2 border-t border-border">
