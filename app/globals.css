@@ -49,6 +49,12 @@ body {
 }
 .animate-letter-fade { animation: letter-fade 0.010s ease-out both; }
 
+@keyframes streaming-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+.streaming-cursor { animation: streaming-cursor 1s ease-in-out infinite; }
+
 .markdown-body { line-height: 1.65; color: var(--foreground); }
 .markdown-body p { margin: 0.4em 0; }
 .markdown-body p:first-child { margin-top: 0; }

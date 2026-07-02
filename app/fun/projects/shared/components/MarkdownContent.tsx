@@ -44,7 +44,7 @@ export function MarkdownContent({
 			<Wrapper className={`markdown-body ${className}`.trim()}>
 				<Markdown remarkPlugins={[remarkGfm]} components={{ p: InlineParagraph }}>{content}</Markdown>
 				{streaming && (
-					<span className={`inline-block align-middle animate-pulse ${cursorClassName}`} />
+					<span className={`inline-block align-middle ml-3 streaming-cursor ${cursorClassName}`} />
 				)}
 			</Wrapper>
 		)
@@ -64,7 +64,7 @@ export function MarkdownContent({
 				{tailContent}
 			</Markdown>
 			{streaming && (
-				<span className={`inline-block align-middle animate-pulse ${cursorClassName}`} />
+				<span className={`inline-block align-middle ml-3 streaming-cursor ${cursorClassName}`} />
 			)}
 		</Wrapper>
 	)

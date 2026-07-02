@@ -136,7 +136,9 @@ export function useBlockDrain<TEvent, TCustom extends { kind: string } = never>(
 	 */
 	const finishWhenDrained = useCallback((onFinish?: () => void) => {
 		if (intervalRef.current !== null) {
-			pendingFinishRef.current = onFinish
+			// Use a no-op sentinel when no callback is given so the drain tick still calls
+			// setBlocks(closeLastText) when the queue empties (marking the block done).
+			pendingFinishRef.current = onFinish ?? (() => {})
 			return
 		}
 		closeOpenText()
