@@ -78,7 +78,25 @@ export default function OneWordStoryProject() {
 
 		if (e.key === 'Backspace') {
 			e.preventDefault()
-			setCurrentInput((prev) => prev.slice(0, -1))
+			if (currentInput !== '') {
+				setCurrentInput((prev) => prev.slice(0, -1))
+				return
+			}
+
+			const lastWord = storyRef.current.at(-1)
+			if (!lastWord) return
+
+			if (lastWord.source === 'ai') {
+				const updated = storyRef.current.slice(0, -1)
+				storyRef.current = updated
+				setStoryWords(updated)
+				return
+			}
+
+			const updated = storyRef.current.slice(0, -1)
+			storyRef.current = updated
+			setStoryWords(updated)
+			setCurrentInput(lastWord.word.slice(0, -1))
 			return
 		}
 		if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
