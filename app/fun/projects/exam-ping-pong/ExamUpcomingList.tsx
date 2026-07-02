@@ -40,6 +40,18 @@ export default function ExamUpcomingList({ nodes, simRef }: Props) {
 	);
 	const prevFiredRef = useRef<Set<string>>(new Set());
 	const outerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [lockedWidth, setLockedWidth] = useState<number | null>(null);
+	const lockedWidthRef = useRef<number | null>(null);
+
+	useLayoutEffect(() => {
+		if (!containerRef.current) return;
+		const w = containerRef.current.offsetWidth;
+		if (w > (lockedWidthRef.current ?? 0)) {
+			lockedWidthRef.current = w;
+			setLockedWidth(w);
+		}
+	}, [entries]);
 
 	useEffect(() => {
 		setEntries(buildEntries(nodes, simRef.current.fired));
@@ -198,7 +210,11 @@ export default function ExamUpcomingList({ nodes, simRef }: Props) {
 					to   { opacity: 1; }
 				}
 			`}</style>
-			<div className="flex flex-col gap-2 w-full shrink-0">
+		<div
+			ref={containerRef}
+			className="flex flex-col gap-2 shrink-0"
+			style={lockedWidth !== null ? { minWidth: lockedWidth } : undefined}
+		>
 				<p className="text-[0.65rem] font-mono uppercase tracking-widest text-muted">Upcoming</p>
 				<div className="flex flex-col overflow-hidden h-50 sm:h-200 [overflow-anchor:none]">
 					{entries.map(({ node, exiting, entering, isGhost, travelY, expanding }) => (
