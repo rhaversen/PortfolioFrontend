@@ -66,8 +66,10 @@
         "ects",
         "STADS",
         "LWSS",
-        "letterfade",
         "Jank",
-        "longtask"
+        "longtask",
+        "Raycaster",
+        "giveup",
+        "oneword"
     ]
 }

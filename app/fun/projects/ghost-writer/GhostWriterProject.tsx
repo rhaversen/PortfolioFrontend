@@ -1,10 +1,46 @@
 ﻿'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit } from '../shared/hooks/useRateLimit'
+import { RateLimitBanner } from '../shared/components/RateLimitBanner'
 
 const MAX_TOKENS = 24
 let nextId = 0
+
+function GhostText({ text }: { text: string }) {
+	const ghostRef = useRef<HTMLSpanElement>(null)
+	const [hasOverflow, setHasOverflow] = useState(false)
+
+	useEffect(() => {
+		const element = ghostRef.current
+		if (!element) return
+
+		const updateOverflow = () => {
+			setHasOverflow(element.scrollWidth > element.clientWidth)
+		}
+
+		updateOverflow()
+
+		const observer = new ResizeObserver(updateOverflow)
+		observer.observe(element)
+
+		return () => observer.disconnect()
+	}, [text])
+
+	return (
+		<span
+			ref={ghostRef}
+			className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
+			style={hasOverflow ? {
+				maskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
+				WebkitMaskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
+			} : undefined}
+		>
+			{text}
+		</span>
+	)
+}
 
 export default function GhostWriterProject() {
 	const [chars, setChars] = useState('')
@@ -12,16 +48,13 @@ export default function GhostWriterProject() {
 	const [loadingRows, setLoadingRows] = useState<Set<number>>(new Set())
 	const [focused, setFocused] = useState(false)
 	const [debug, setDebug] = useState(false)
+	const { rateLimitExpiresAt, retryCountdown, triggerRateLimit } = useRateLimit()
 
-	const socketRef = useRef<Socket | null>(null)
 	const charsRef = useRef('')
 	// Maps requestId → prefix length so chunks route to the right row
 	const requestMapRef = useRef(new Map<string, number>())
 
-	useEffect(() => {
-		const socket = io(process.env.NEXT_PUBLIC_WS_URL ?? '/')
-		socketRef.current = socket
-
+	const socketRef = useSocket((socket) => {
 		socket.on('predict:chunk', ({ requestId, text: chunk }: { requestId: string; text: string }) => {
 			const idx = requestMapRef.current.get(requestId)
 			if (idx === undefined) return
@@ -34,13 +67,14 @@ export default function GhostWriterProject() {
 			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
 		})
 
-		socket.on('predict:error', ({ requestId }: { requestId: string }) => {
+		socket.on('predict:error', ({ requestId, retryAfterMs }: { requestId: string; retryAfterMs?: number }) => {
 			const idx = requestMapRef.current.get(requestId)
 			requestMapRef.current.delete(requestId)
 			if (idx !== undefined) setLoadingRows(prev => { const s = new Set(prev); s.delete(idx); return s })
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				triggerRateLimit(retryAfterMs)
+			}
 		})
-
-		return () => { socket.disconnect() }
 	}, [])
 
 	function predict(prefix: string) {
@@ -75,13 +109,13 @@ export default function GhostWriterProject() {
 			const next = charsRef.current + ' '
 			charsRef.current = next
 			setChars(next)
+			setGhosts(prev => { const c = { ...prev }; delete c[next.length]; return c })
+			predict(next)
 		} else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			e.preventDefault()
 			const next = charsRef.current + e.key
 			charsRef.current = next
 			setChars(next)
-			setGhosts(prev => { const c = { ...prev }; delete c[next.length]; return c })
-			predict(next)
 		}
 	}
 
@@ -118,41 +152,40 @@ export default function GhostWriterProject() {
 						</>
 					)}
 				</div>
-				{[...chars].map((char, i) => {
-							if (char === ' ') return null
+				{(() => {
+					const rows: { len: number; prefix: string; ghost: string; loading: boolean }[] = []
+					for (let i = 0; i < chars.length; i++) {
+						if (chars[i] === ' ') {
 							const len = i + 1
-							const prefix = chars.slice(0, len)
-							const rawGhost = ghosts[len] ?? ''
-							const ghost = prefix.endsWith(' ') ? rawGhost.trimStart() : rawGhost
+							rows.push({
+								len,
+								prefix: chars.slice(0, len).trimEnd(),
+								ghost: (ghosts[len] ? (/^[.,!?]/.test(ghosts[len].trimStart()) ? '' : ' ') + ghosts[len].trimStart() : ''),
+								loading: loadingRows.has(len),
+							})
+						}
+					}
 
-							return (
-								<div key={len} className="flex whitespace-nowrap overflow-hidden">
-									<span className="text-foreground shrink-0">{prefix}</span>
-									{ghost && (
+					return rows.reverse().map(({ len, prefix, ghost, loading }) => (
+						<div key={len} className="flex whitespace-nowrap overflow-hidden">
+							<span className="text-foreground shrink-0">{prefix}</span>
+							{ghost && (
+								<GhostText text={ghost} />
+							)}
+							{loading && !ghost && (
+								<span className="inline-flex pl-2 items-center gap-px align-middle ml-0.5">
+									{[0, 1, 2].map(j => (
 										<span
-											className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
-											style={{
-												maskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
-												WebkitMaskImage: 'linear-gradient(to right, black 30%, transparent 90%)',
-											}}
-										>
-											{ghost}
-										</span>
-									)}
-						{loadingRows.has(len) && !ghost && (
-							<span className="inline-flex items-center gap-px align-middle ml-0.5">
-											{[0, 1, 2].map(j => (
-												<span
-													key={j}
-													className="inline-block w-1 h-1 rounded-full bg-foreground/15 animate-bounce"
-													style={{ animationDelay: `${j * 160}ms` }}
-												/>
-											))}
-										</span>
-									)}
-								</div>
-							)
-				}).reverse()}
+											key={j}
+											className="inline-block w-1 h-1 rounded-full bg-foreground/15 animate-bounce"
+											style={{ animationDelay: `${j * 160}ms` }}
+										/>
+									))}
+								</span>
+							)}
+						</div>
+					))
+				})()}
 			</div>
 
 			<div className="flex justify-end gap-2 px-3 py-2 border-t border-border">
@@ -169,6 +202,9 @@ export default function GhostWriterProject() {
 					Clear
 				</button>
 			</div>
+			{rateLimitExpiresAt !== null && retryCountdown > 0 && (
+				<RateLimitBanner retryCountdown={retryCountdown} />
+			)}
 			{debug && (
 				<div className="border-t border-border p-3 font-mono text-[0.65rem] text-foreground/60 space-y-1">
 					{Object.entries(ghosts)
