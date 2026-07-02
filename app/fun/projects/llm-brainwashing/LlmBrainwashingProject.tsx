@@ -164,7 +164,7 @@ export default function LlmBrainwashingProject() {
 							<span className="text-foreground/60 whitespace-pre-wrap">{prefillInput.trimEnd()}{prefillInput.trimEnd() ? ' ' : ''}</span>
 							<MarkdownContent
 								as="span"
-								className="text-blue-400 [&>p:first-child]:inline [&>p:first-child]:m-0"
+								className="text-blue-400"
 								streaming={isStreaming || stillTyping}
 								cursorClassName="w-1.5 h-[1em] bg-blue-400 ml-0.5"
 							>
