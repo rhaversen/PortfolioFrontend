@@ -229,19 +229,19 @@ export interface OneWordStoryPreset {
 export const ONE_WORD_STORY_PRESETS: OneWordStoryPreset[] = [
 	{
 		label: 'Absurd',
-		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward the absurd and surreal, one word at a time. Never add more than a single word, no matter how tempting.',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward the absurd and surreal, one word at a time.',
 	},
 	{
 		label: 'Ominous',
-		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something dark, unsettling, and foreboding, one word at a time. Never add more than a single word, no matter how tempting.',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something dark, unsettling, and foreboding, one word at a time.',
 	},
 	{
 		label: 'Balanced',
-		systemPrompt: 'You are playing a collaborative storytelling game with the user. You take turns adding exactly one word at a time to build a sentence together. Stay grammatically coherent and follow the tone already established. Never add more than a single word, no matter how tempting.',
+		systemPrompt: 'You are playing a collaborative storytelling game with the user. You take turns adding exactly one word at a time to build a sentence together. Stay grammatically coherent and follow the tone already established.',
 	},
 	{
 		label: 'Wholesome',
-		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something warm, wholesome, and heartfelt, one word at a time. Never add more than a single word, no matter how tempting.',
+		systemPrompt: 'You are playing a one-word-at-a-time storytelling game with the user. Steer the story toward something warm, wholesome, and heartfelt, one word at a time.',
 	}
 ]
 
