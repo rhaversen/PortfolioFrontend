@@ -43,11 +43,17 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes letterfade {
+@keyframes letter-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-letterfade { animation: letterfade 0.010s ease-out both; }
+.animate-letter-fade { animation: letter-fade 0.010s ease-out both; }
+
+@keyframes streaming-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+.streaming-cursor { animation: streaming-cursor 1s ease-in-out infinite; }
 
 .markdown-body { line-height: 1.65; color: var(--foreground); }
 .markdown-body p { margin: 0.4em 0; }
