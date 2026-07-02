@@ -81,11 +81,7 @@ export default function OneWordStoryProject() {
 			setCurrentInput((prev) => prev.slice(0, -1))
 			return
 		}
-		if (e.key === ' ' || e.code === 'Space') {
-			e.preventDefault()
-			return
-		}
-		if (e.key === 'Enter') {
+		if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
 			e.preventDefault()
 			submitWord()
 			return
