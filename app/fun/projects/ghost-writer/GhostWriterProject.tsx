@@ -1,12 +1,46 @@
 ﻿'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSocket } from '../shared/hooks/useSocket'
 import { useRateLimit } from '../shared/hooks/useRateLimit'
 import { RateLimitBanner } from '../shared/components/RateLimitBanner'
 
 const MAX_TOKENS = 24
 let nextId = 0
+
+function GhostText({ text }: { text: string }) {
+	const ghostRef = useRef<HTMLSpanElement>(null)
+	const [hasOverflow, setHasOverflow] = useState(false)
+
+	useEffect(() => {
+		const element = ghostRef.current
+		if (!element) return
+
+		const updateOverflow = () => {
+			setHasOverflow(element.scrollWidth > element.clientWidth)
+		}
+
+		updateOverflow()
+
+		const observer = new ResizeObserver(updateOverflow)
+		observer.observe(element)
+
+		return () => observer.disconnect()
+	}, [text])
+
+	return (
+		<span
+			ref={ghostRef}
+			className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
+			style={hasOverflow ? {
+				maskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
+				WebkitMaskImage: 'linear-gradient(to right, black 95%, transparent 100%)',
+			} : undefined}
+		>
+			{text}
+		</span>
+	)
+}
 
 export default function GhostWriterProject() {
 	const [chars, setChars] = useState('')
@@ -126,7 +160,7 @@ export default function GhostWriterProject() {
 							rows.push({
 								len,
 								prefix: chars.slice(0, len).trimEnd(),
-								ghost: ((/[.!?,]$/.test(ghosts[len]) ? '' : ' ') + (ghosts[len]?.trimStart() ?? '')),
+								ghost: (ghosts[len] ? (/^[.,!?]/.test(ghosts[len].trimStart()) ? '' : ' ') + ghosts[len].trimStart() : ''),
 								loading: loadingRows.has(len),
 							})
 						}
@@ -136,15 +170,7 @@ export default function GhostWriterProject() {
 						<div key={len} className="flex whitespace-nowrap overflow-hidden">
 							<span className="text-foreground shrink-0">{prefix}</span>
 							{ghost && (
-								<span
-									className="text-foreground/40 overflow-hidden min-w-0 whitespace-pre"
-									style={{
-										maskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
-										WebkitMaskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
-									}}
-								>
-									{ghost}
-								</span>
+								<GhostText text={ghost} />
 							)}
 							{loading && !ghost && (
 								<span className="inline-flex pl-2 items-center gap-px align-middle ml-0.5">
