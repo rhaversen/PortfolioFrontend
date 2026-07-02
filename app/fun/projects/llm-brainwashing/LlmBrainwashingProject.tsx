@@ -1,73 +1,57 @@
 ﻿'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useRef, useState } from 'react'
 import { LLM_BRAINWASHING_PRESETS } from '../sampleData'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit } from '../shared/hooks/useRateLimit'
+import { useBlockDrain } from '../shared/hooks/useBlockDrain'
+import { RateLimitBanner } from '../shared/components/RateLimitBanner'
+import { PresetTabs } from '../shared/components/PresetTabs'
+import { MarkdownContent } from '../shared/components/MarkdownContent'
 
 export default function LlmBrainwashingProject() {
 	const firstPreset = LLM_BRAINWASHING_PRESETS[0]
 	const [systemPrompt, setSystemPrompt] = useState(firstPreset.systemPrompt)
 	const [userInput, setUserInput] = useState(firstPreset.userMessage)
 	const [prefillInput, setPrefillInput] = useState(firstPreset.assistantPrefill)
-	const [generated, setGenerated] = useState('')
 	const [isStreaming, setIsStreaming] = useState(false)
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
 	const [copied, setCopied] = useState(false)
-	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
-	const [retryCountdown, setRetryCountdown] = useState(0)
-	const socketRef = useRef<Socket | null>(null)
+	const { rateLimitExpiresAt, retryCountdown, triggerRateLimit, clearRateLimit } = useRateLimit()
 	const prefillRef = useRef<HTMLTextAreaElement | null>(null)
 
-	useEffect(() => {
-		if (rateLimitExpiresAt === null) return
-		const updateCountdown = () => {
-			const remaining = rateLimitExpiresAt - Date.now()
-			if (remaining <= 0) {
-				setRateLimitExpiresAt(null)
-				setRetryCountdown(0)
-			} else {
-				setRetryCountdown(Math.ceil(remaining / 1000))
-			}
-		}
-		const initialId = setTimeout(updateCountdown, 0)
-		const id = setInterval(updateCountdown, 1000)
-		return () => {
-			clearTimeout(initialId)
-			clearInterval(id)
-		}
-	}, [rateLimitExpiresAt])
+	const { blocks, pushText, reset: resetDrain, cancel: cancelDrain, closeOpenText, finishWhenDrained } = useBlockDrain<never>({ intervalMs: 12 })
 
-	useEffect(() => {
-		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
-		const socket = io(apiUrl)
-		socketRef.current = socket
+	const textBlock = blocks[0]
+	const generated = textBlock?.kind === 'text' ? textBlock.text : ''
+	const stillTyping = textBlock?.kind === 'text' ? !textBlock.done : false
 
+	const socketRef = useSocket((socket) => {
 		socket.on('brainwash:chunk', ({ text }: { text: string }) => {
-			setGenerated((prev) => prev + text)
+			pushText(text)
 		})
 
 		socket.on('brainwash:done', () => {
 			setIsStreaming(false)
+			finishWhenDrained()
 		})
 
 		socket.on('brainwash:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
 			if (retryAfterMs !== undefined && retryAfterMs > 0) {
-				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+				triggerRateLimit(retryAfterMs)
 			} else {
-				setGenerated('(error)')
+				resetDrain()
+				pushText('(error)')
+				closeOpenText()
 			}
 			setIsStreaming(false)
 		})
-
-		return () => { socket.disconnect() }
-	}, [])
+	}, [pushText, resetDrain, closeOpenText, finishWhenDrained, triggerRateLimit])
 
 	function send() {
 		if (!userInput.trim() || isStreaming) return
-		setGenerated('')
-		setRateLimitExpiresAt(null)
+		resetDrain()
+		clearRateLimit()
 		setIsStreaming(true)
 		socketRef.current?.emit('brainwash:request', {
 			systemPrompt: systemPrompt.trim() || undefined,
@@ -78,6 +62,7 @@ export default function LlmBrainwashingProject() {
 
 	function cancel() {
 		socketRef.current?.emit('brainwash:cancel')
+		cancelDrain()
 		setIsStreaming(false)
 	}
 
@@ -93,7 +78,7 @@ export default function LlmBrainwashingProject() {
 			cancel()
 		}
 		if (generated) {
-			setGenerated('')
+			resetDrain()
 		}
 		if (isStreaming || generated) {
 			setTimeout(() => prefillRef.current?.focus(), 0)
@@ -102,22 +87,13 @@ export default function LlmBrainwashingProject() {
 
 	const showOverlay = isStreaming || generated !== ''
 
-	function formatCountdown(totalSeconds: number): string {
-		const hours = Math.floor(totalSeconds / 3600)
-		const minutes = Math.floor((totalSeconds % 3600) / 60)
-		const seconds = totalSeconds % 60
-		if (hours > 0) return `${hours}h ${minutes}m`
-		if (minutes > 0) return `${minutes}m ${seconds}s`
-		return `${seconds}s`
-	}
-
 	function applyPreset(index: number) {
 		if (isStreaming) cancel()
 		const preset = LLM_BRAINWASHING_PRESETS[index]
 		setSystemPrompt(preset.systemPrompt)
 		setUserInput(preset.userMessage)
 		setPrefillInput(preset.assistantPrefill)
-		setGenerated('')
+		resetDrain()
 		setSelectedPreset(index)
 	}
 
@@ -131,18 +107,12 @@ export default function LlmBrainwashingProject() {
 	return (
 		<div className="flex flex-col gap-0 border border-border">
 
-			<div className="flex flex-wrap gap-2 px-3 py-2 border-b border-border">
-				<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
-				{LLM_BRAINWASHING_PRESETS.map((preset, i) => (
-					<button
-						key={preset.label}
-						onClick={() => applyPreset(i)}
-				className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
-					>
-						{preset.label}
-					</button>
-				))}
-			</div>
+			<PresetTabs
+				presets={LLM_BRAINWASHING_PRESETS}
+				getLabel={(preset) => preset.label}
+				selectedIndex={selectedPreset}
+				onSelect={applyPreset}
+			/>
 
 			<div className="border-b border-border">
 				<label htmlFor="system-prompt" className="block px-3 pt-2 pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">System Prompt (optional)</label>
@@ -191,12 +161,15 @@ export default function LlmBrainwashingProject() {
 					/>
 					{showOverlay && (
 						<div className="px-4 py-3 text-sm leading-relaxed">
-							<span className="text-foreground/60 whitespace-pre-wrap">{prefillInput.trimEnd()}{prefillInput.trimEnd() ? ' ' : ''}</span><span className="text-blue-400 markdown-body [&>p:first-child]:inline [&>p:first-child]:m-0">
-								<Markdown remarkPlugins={[remarkGfm]}>{generated}</Markdown>
-								{isStreaming && (
-									<span className="inline-block w-1.5 h-[1em] bg-blue-400 ml-0.5 align-middle animate-pulse" />
-								)}
-							</span>
+							<span className="text-foreground/60 whitespace-pre-wrap">{prefillInput.trimEnd()}{prefillInput.trimEnd() ? ' ' : ''}</span>
+							<MarkdownContent
+								as="span"
+								className="text-blue-400 [&>p:first-child]:inline [&>p:first-child]:m-0"
+								streaming={isStreaming || stillTyping}
+								cursorClassName="w-1.5 h-[1em] bg-blue-400 ml-0.5"
+							>
+								{generated}
+							</MarkdownContent>
 						</div>
 					)}
 				</div>
@@ -219,9 +192,7 @@ export default function LlmBrainwashingProject() {
 				</div>
 			</div>
 			{rateLimitExpiresAt !== null && retryCountdown > 0 && (
-				<div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[0.7rem] font-mono text-amber-400">
-					Rate limit reached — try again in {formatCountdown(retryCountdown)}
-				</div>
+				<RateLimitBanner retryCountdown={retryCountdown} className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[0.7rem] font-mono text-amber-400" />
 			)}
 		</div>
 	)

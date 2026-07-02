@@ -1,4 +1,3 @@
-import AgentGiveUpProject from "./agent-give-up/AgentGiveUpProject";
 import AlcoholCheapskateProject from "./alcohol-cheapskate/AlcoholCheapskateProject";
 import TerminatorProject from "./terminator/TerminatorProject";
 import GhostWriterProject from "./ghost-writer/GhostWriterProject";

@@ -1,52 +1,37 @@
 'use client'
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { GIVE_UP_TASK_PRESETS } from '../sampleData'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit, formatCountdown } from '../shared/hooks/useRateLimit'
+import { useBlockDrain, type DrainBlock } from '../shared/hooks/useBlockDrain'
+import { StreamingTextBlock } from '../shared/components/StreamingTextBlock'
+import { EventBlock } from '../shared/components/EventBlock'
+import { PresetTabs } from '../shared/components/PresetTabs'
 
 type AgentAction = 'submit_response' | 'give_up'
 type Phase = 'idle' | 'thinking' | 'gave-up' | 'submitted' | 'error'
-
-type Block =
-	| { id: string; kind: 'text'; text: string; done: boolean }
-	| { id: string; kind: 'tool'; name: AgentAction; response?: string }
-
-type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: AgentAction; response?: string }
+type ToolEvent = { toolName: AgentAction; response?: string }
 
 const TOOL_LABELS: Record<AgentAction, string> = {
 	submit_response: 'Response submitted',
 	give_up: 'Give up',
 }
 
-const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { kind: 'text' }> }) {
-	return (
-		<div className="px-4 py-4 text-xs font-mono leading-relaxed text-foreground/70">
-			<div className="markdown-body text-xs">
-				<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
-				{!block.done && (
-					<span className="inline-block w-1 h-[0.9em] bg-foreground/30 align-middle animate-pulse" />
-				)}
-			</div>
-		</div>
-	)
-})
-
-const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { kind: 'tool' }> }) {
-	const accent = block.name === 'give_up'
+const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<DrainBlock<ToolEvent>, { kind: 'event' }> }) {
+	const { toolName, response } = block.payload
+	const accent = toolName === 'give_up'
 		? 'border-red-500/50 text-red-400/70'
 		: 'border-border text-foreground/50'
 	return (
-		<div className="px-4 py-3 bg-border/5">
-			<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted mb-2">Tool call</p>
+		<EventBlock label="Tool call">
 			<span className={`inline-flex items-center border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
-				{TOOL_LABELS[block.name]}
+				{TOOL_LABELS[toolName]}
 			</span>
-			{block.response !== undefined && block.response.length > 0 && (
-				<p className="mt-2 text-xs font-mono text-foreground/70 whitespace-pre-wrap">{block.response}</p>
+			{response !== undefined && response.length > 0 && (
+				<p className="mt-2 text-xs font-mono text-foreground/70 whitespace-pre-wrap">{response}</p>
 			)}
-		</div>
+		</EventBlock>
 	)
 })
 
@@ -54,139 +39,47 @@ export default function AgentGiveUpProject() {
 	const [phase, setPhase] = useState<Phase>('idle')
 	const [task, setTask] = useState(GIVE_UP_TASK_PRESETS[0].task)
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
-	const [blocks, setBlocks] = useState<Block[]>([])
-	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
-	const [retryCountdown, setRetryCountdown] = useState(0)
+	const { retryCountdown, isRateLimited, triggerRateLimit } = useRateLimit()
 	const [hasGuessed, setHasGuessed] = useState(false)
 
-	const socketRef = useRef<Socket | null>(null)
 	const scrollRef = useRef<HTMLDivElement>(null)
-	const idRef = useRef(0)
-	const segQueueRef = useRef<QueueSegment[]>([])
-	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const wasAtBottomRef = useRef(true)
 	const prevScrollTopRef = useRef(0)
-	const finalPhaseRef = useRef<Phase | null>(null)
 
-	useEffect(() => {
-		if (rateLimitExpiresAt === null) return
-		const updateCountdown = () => {
-			const remaining = rateLimitExpiresAt - Date.now()
-			if (remaining <= 0) {
-				setRateLimitExpiresAt(null)
-				setRetryCountdown(0)
-			} else {
-				setRetryCountdown(Math.ceil(remaining / 1000))
-			}
-		}
-		const initialId = setTimeout(updateCountdown, 0)
-		const id = setInterval(updateCountdown, 1000)
-		return () => {
-			clearTimeout(initialId)
-			clearInterval(id)
-		}
-	}, [rateLimitExpiresAt])
-
-	const stopDrain = useCallback(() => {
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
-	}, [])
-
-	const commitFinalPhase = useCallback(() => {
-		if (finalPhaseRef.current === null) return
-		setBlocks(prev => {
-			const last = prev[prev.length - 1]
-			if (last?.kind === 'text' && !last.done) {
-				return [...prev.slice(0, -1), { ...last, done: true }]
-			}
-			return prev
+	const { blocks, pushText, pushEvent, reset: resetDrain, cancel: cancelDrain, finishWhenDrained } =
+		useBlockDrain<ToolEvent>({
+			intervalMs: 12,
+			onEvent: (payload) => {
+				if (payload.toolName === 'submit_response') setHasGuessed(true)
+			},
 		})
-		setPhase(finalPhaseRef.current)
-		finalPhaseRef.current = null
-	}, [])
 
-	const startDrain = useCallback(() => {
-		if (drainIntervalRef.current !== null) return
-		drainIntervalRef.current = setInterval(() => {
-			const seg = segQueueRef.current[0]
-			if (!seg) {
-				stopDrain()
-				commitFinalPhase()
-				return
-			}
-			if (seg.type === 'tool') {
-				if (seg.toolName === 'submit_response') {
-					setHasGuessed(true)
-				}
-				segQueueRef.current.shift()
-				setBlocks(prev => {
-					const last = prev[prev.length - 1]
-					const closed = last?.kind === 'text' && !last.done
-						? [...prev.slice(0, -1), { ...last, done: true }]
-						: prev
-						return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, response: seg.response }]
-				})
-			} else {
-				const char = seg.text[0]
-				seg.text = seg.text.slice(1)
-				if (seg.text.length === 0) segQueueRef.current.shift()
-				setBlocks(prev => {
-					const last = prev[prev.length - 1]
-					if (last?.kind === 'text' && !last.done) {
-						return [...prev.slice(0, -1), { ...last, text: last.text + char }]
-					}
-					return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
-				})
-			}
-		}, 12)
-	}, [stopDrain, commitFinalPhase])
-
-	useEffect(() => {
-		const socket = io(process.env.NEXT_PUBLIC_WS_URL ?? '/')
-		socketRef.current = socket
-
+	const socketRef = useSocket((socket) => {
 		socket.on('giveup:chunk', ({ text }: { text: string }) => {
-			const last = segQueueRef.current[segQueueRef.current.length - 1]
-			if (last?.type === 'text') {
-				last.text += text
-			} else {
-				segQueueRef.current.push({ type: 'text', text })
-			}
-			startDrain()
+			pushText(text)
 		})
 
 		socket.on('giveup:toolCall', ({ toolName, response }: { toolName: AgentAction; response?: string }) => {
-			segQueueRef.current.push({ type: 'tool', toolName, response })
-			startDrain()
+			pushEvent({ toolName, response })
 		})
 
 		socket.on('giveup:gave-up', () => {
-			finalPhaseRef.current = 'gave-up'
-			if (drainIntervalRef.current === null) commitFinalPhase()
+			finishWhenDrained(() => setPhase('gave-up'))
 		})
 
 		socket.on('giveup:submitted', () => {
-			finalPhaseRef.current = 'submitted'
-			if (drainIntervalRef.current === null) commitFinalPhase()
+			finishWhenDrained(() => setPhase('submitted'))
 		})
 
 		socket.on('giveup:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
-			stopDrain()
-			segQueueRef.current = []
-			finalPhaseRef.current = null
+			cancelDrain()
 			if (retryAfterMs != null) {
-				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+				triggerRateLimit(retryAfterMs)
 			}
 			setPhase('error')
 		})
+	}, [pushText, pushEvent, finishWhenDrained, cancelDrain, triggerRateLimit])
 
-		return () => {
-			socket.disconnect()
-			stopDrain()
-		}
-	}, [startDrain, stopDrain, commitFinalPhase])
 
 	useEffect(() => {
 		const el = scrollRef.current
@@ -212,66 +105,41 @@ export default function AgentGiveUpProject() {
 	const handleSend = useCallback(() => {
 		if (!task.trim() || phase === 'thinking') return
 		setPhase('thinking')
-		setBlocks([])
+		resetDrain()
 		setHasGuessed(false)
-		finalPhaseRef.current = null
-		segQueueRef.current = []
-		stopDrain()
-		idRef.current = 0
 		wasAtBottomRef.current = true
 		socketRef.current?.emit('giveup:start', { task: task.trim() })
-	}, [task, phase, stopDrain])
+	}, [task, phase, resetDrain, socketRef])
 
 	const handleCancel = useCallback(() => {
 		socketRef.current?.emit('giveup:cancel')
-		stopDrain()
-		segQueueRef.current = []
-		finalPhaseRef.current = null
-		setBlocks(prev => prev.map(b => b.kind === 'text' && !b.done ? { ...b, done: true } : b))
+		cancelDrain()
 		setHasGuessed(false)
 		setPhase('idle')
-	}, [stopDrain])
+	}, [cancelDrain, socketRef])
 
 	function applyPreset(index: number) {
 		if (phase === 'thinking') handleCancel()
 		setTask(GIVE_UP_TASK_PRESETS[index].task)
 		setSelectedPreset(index)
-		setBlocks([])
+		resetDrain()
 		setHasGuessed(false)
-		finalPhaseRef.current = null
-		segQueueRef.current = []
-		stopDrain()
 		setPhase('idle')
-	}
-
-	function formatCountdown(totalSeconds: number): string {
-		const hours = Math.floor(totalSeconds / 3600)
-		const minutes = Math.floor((totalSeconds % 3600) / 60)
-		const seconds = totalSeconds % 60
-		if (hours > 0) return `${hours}h ${minutes}m`
-		if (minutes > 0) return `${minutes}m ${seconds}s`
-		return `${seconds}s`
 	}
 
 	const isThinking = phase === 'thinking'
 	const hasGivenUp = phase === 'gave-up'
-	const isRateLimited = rateLimitExpiresAt !== null
 
 	return (
 		<div className="space-y-6">
 			<div className="border border-border/40">
-				<div className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30 bg-border/5">
-					<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
-					{GIVE_UP_TASK_PRESETS.map((preset, i) => (
-						<button
-							key={preset.label}
-							onClick={() => applyPreset(i)}
-							className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
-						>
-							{preset.label}
-						</button>
-					))}
-				</div>
+				<PresetTabs
+					presets={GIVE_UP_TASK_PRESETS}
+					getLabel={(preset) => preset.label}
+					selectedIndex={selectedPreset}
+					onSelect={applyPreset}
+					className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30 bg-border/5"
+				/>
 
 				<div className="border-b border-border/30">
 					<label htmlFor="task-input" className="block px-4 pt-2 pb-1 text-[0.6rem] font-mono uppercase tracking-widest text-muted/60">
@@ -331,7 +199,7 @@ export default function AgentGiveUpProject() {
 				>
 					{blocks.map(block =>
 						block.kind === 'text'
-							? <TextBlock key={block.id} block={block} />
+							? <StreamingTextBlock key={block.id} text={block.text} done={block.done} />
 							: <ToolBlock key={block.id} block={block} />
 					)}
 					{isThinking && blocks[blocks.length - 1]?.kind !== 'text' && (

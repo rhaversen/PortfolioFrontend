@@ -1,8 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { useCallback, useRef, useState } from 'react'
 import { ONE_WORD_STORY_PRESETS } from '../sampleData'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit } from '../shared/hooks/useRateLimit'
+import { RateLimitBanner } from '../shared/components/RateLimitBanner'
+import { PresetTabs } from '../shared/components/PresetTabs'
 
 type StoryWord = { word: string; source: 'user' | 'ai' }
 
@@ -21,10 +24,8 @@ export default function OneWordStoryProject() {
 	const [isWaiting, setIsWaiting] = useState(false)
 	const [focused, setFocused] = useState(false)
 	const [errorMessage, setErrorMessage] = useState('')
-	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
-	const [retryCountdown, setRetryCountdown] = useState(0)
+	const { rateLimitExpiresAt, retryCountdown, triggerRateLimit, clearRateLimit } = useRateLimit()
 
-	const socketRef = useRef<Socket | null>(null)
 	const storyRef = useRef<StoryWord[]>([])
 	const systemPromptRef = useRef(systemPrompt)
 	const containerRef = useRef<HTMLDivElement | null>(null)
@@ -32,30 +33,7 @@ export default function OneWordStoryProject() {
 	const isGameOver = storyWords.length >= MAX_STORY_WORDS
 	const inputDisabled = isWaiting || isGameOver || rateLimitExpiresAt !== null
 
-	useEffect(() => {
-		if (rateLimitExpiresAt === null) return
-		const updateCountdown = () => {
-			const remaining = rateLimitExpiresAt - Date.now()
-			if (remaining <= 0) {
-				setRateLimitExpiresAt(null)
-				setRetryCountdown(0)
-			} else {
-				setRetryCountdown(Math.ceil(remaining / 1000))
-			}
-		}
-		const initialId = setTimeout(updateCountdown, 0)
-		const id = setInterval(updateCountdown, 1000)
-		return () => {
-			clearTimeout(initialId)
-			clearInterval(id)
-		}
-	}, [rateLimitExpiresAt])
-
-	useEffect(() => {
-		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
-		const socket = io(apiUrl)
-		socketRef.current = socket
-
+	const socketRef = useSocket((socket) => {
 		socket.on('oneword:word', ({ word }: { word: string }) => {
 			const updated = [...storyRef.current, { word, source: 'ai' as const }]
 			storyRef.current = updated
@@ -67,25 +45,23 @@ export default function OneWordStoryProject() {
 		socket.on('oneword:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
 			setIsWaiting(false)
 			if (retryAfterMs !== undefined && retryAfterMs > 0) {
-				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+				triggerRateLimit(retryAfterMs)
 			} else {
 				setErrorMessage('The AI failed to respond. Try adding another word.')
 			}
 		})
-
-		return () => { socket.disconnect() }
 	}, [])
 
 	const requestAiWord = useCallback((words: StoryWord[]) => {
 		setIsWaiting(true)
 		setErrorMessage('')
-		setRateLimitExpiresAt(null)
+		clearRateLimit()
 		const story = words.map((w) => w.word).join(' ')
 		socketRef.current?.emit('oneword:request', {
 			systemPrompt: systemPromptRef.current.trim() || undefined,
 			story,
 		})
-	}, [])
+	}, [clearRateLimit, socketRef])
 
 	const submitWord = useCallback(() => {
 		const word = currentInput.trim()
@@ -127,7 +103,7 @@ export default function OneWordStoryProject() {
 		setCurrentInput('')
 		setIsWaiting(false)
 		setErrorMessage('')
-		setRateLimitExpiresAt(null)
+		clearRateLimit()
 		setTimeout(() => containerRef.current?.focus(), 0)
 	}
 
@@ -144,29 +120,15 @@ export default function OneWordStoryProject() {
 		setSelectedPreset(null)
 	}
 
-	function formatCountdown(totalSeconds: number): string {
-		const hours = Math.floor(totalSeconds / 3600)
-		const minutes = Math.floor((totalSeconds % 3600) / 60)
-		const seconds = totalSeconds % 60
-		if (hours > 0) return `${hours}h ${minutes}m`
-		if (minutes > 0) return `${minutes}m ${seconds}s`
-		return `${seconds}s`
-	}
-
 	return (
 		<div className="flex flex-col gap-0 border border-border">
-			<div className="flex flex-wrap gap-2 px-3 py-2 border-b border-border">
-				<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Tone:</span>
-				{ONE_WORD_STORY_PRESETS.map((preset, i) => (
-					<button
-						key={preset.label}
-						onClick={() => applyPreset(i)}
-						className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
-					>
-						{preset.label}
-					</button>
-				))}
-			</div>
+			<PresetTabs
+				label="Tone:"
+				presets={ONE_WORD_STORY_PRESETS}
+				getLabel={(preset) => preset.label}
+				selectedIndex={selectedPreset}
+				onSelect={applyPreset}
+			/>
 
 			<div className="border-b border-border">
 				<label htmlFor="system-prompt" className="block px-3 pt-2 pb-1 text-[0.65rem] font-mono uppercase tracking-widest text-muted/60">System Prompt</label>
@@ -240,9 +202,7 @@ export default function OneWordStoryProject() {
 				</div>
 			)}
 			{rateLimitExpiresAt !== null && retryCountdown > 0 && (
-				<div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[0.7rem] font-mono text-amber-400">
-					Rate limit reached — try again in {formatCountdown(retryCountdown)}
-				</div>
+				<RateLimitBanner retryCountdown={retryCountdown} className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-[0.7rem] font-mono text-amber-400" />
 			)}
 		</div>
 	)

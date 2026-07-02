@@ -1,38 +1,23 @@
 'use client'
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { TERMINATOR_SYSTEM_PRESETS } from '../sampleData'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit, formatCountdown } from '../shared/hooks/useRateLimit'
+import { useBlockDrain, type DrainBlock } from '../shared/hooks/useBlockDrain'
+import { StreamingTextBlock } from '../shared/components/StreamingTextBlock'
+import { MarkdownContent } from '../shared/components/MarkdownContent'
+import { PresetTabs } from '../shared/components/PresetTabs'
 
 type Phase = 'idle' | 'thinking' | 'terminated' | 'done' | 'error'
+type LoopEvent = { turn: number; message: string }
 
-type Block =
-	| { id: string; kind: 'text'; text: string; done: boolean }
-	| { id: string; kind: 'loop'; turn: number; message: string }
-
-type QueueSegment = { type: 'text'; text: string } | { type: 'loop'; turn: number; message: string }
-
-const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { kind: 'text' }> }) {
-	return (
-		<div className="px-4 py-4 text-xs font-mono leading-relaxed text-foreground/70">
-			<div className="markdown-body text-xs">
-				<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
-				{!block.done && (
-					<span className="inline-block w-1 h-[0.9em] bg-foreground/30 align-middle animate-pulse" />
-				)}
-			</div>
-		</div>
-	)
-})
-
-const LoopBlock = memo(function LoopBlock({ block }: { block: Extract<Block, { kind: 'loop' }> }) {
+const LoopBlock = memo(function LoopBlock({ block }: { block: Extract<DrainBlock<LoopEvent>, { kind: 'event' }> }) {
 	return (
 		<div className="px-4 py-2 flex items-center gap-3">
 			<div className="flex-1 border-t border-border/30" />
-			<div className="text-[0.6rem] max-w-[90%] flex-wrap font-mono uppercase tracking-widest text-muted/90 shrink-0 markdown-body">
-				<Markdown remarkPlugins={[remarkGfm]}>{block.message}</Markdown>
+			<div className="text-[0.6rem] max-w-[90%] flex-wrap font-mono uppercase tracking-widest text-muted/90 shrink-0">
+				<MarkdownContent>{block.payload.message}</MarkdownContent>
 			</div>
 			<div className="flex-1 border-t border-border/30" />
 		</div>
@@ -43,154 +28,60 @@ export default function TerminatorProject() {
 	const [phase, setPhase] = useState<Phase>('idle')
 	const [systemPrompt, setSystemPrompt] = useState(TERMINATOR_SYSTEM_PRESETS[0].systemPrompt)
 	const [selectedPreset, setSelectedPreset] = useState<number | null>(0)
-	const [blocks, setBlocks] = useState<Block[]>([])
-	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
-	const [retryCountdown, setRetryCountdown] = useState(0)
+	const { retryCountdown, isRateLimited, triggerRateLimit } = useRateLimit()
 
-	const socketRef = useRef<Socket | null>(null)
 	const systemPromptRef = useRef(TERMINATOR_SYSTEM_PRESETS[0].systemPrompt)
 	const scrollRef = useRef<HTMLDivElement>(null)
-	const idRef = useRef(0)
-	const segQueueRef = useRef<QueueSegment[]>([])
-	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const wasAtBottomRef = useRef(true)
 	const prevScrollTopRef = useRef(0)
 	const lastScrollDirectionRef = useRef<'up' | 'down' | null>(null)
-	const finalPhaseRef = useRef<Phase | null>(null)
 
-	useEffect(() => {
-		if (rateLimitExpiresAt === null) return
-		const updateCountdown = () => {
-			const remaining = rateLimitExpiresAt - Date.now()
-			if (remaining <= 0) {
-				setRateLimitExpiresAt(null)
-				setRetryCountdown(0)
-			} else {
-				setRetryCountdown(Math.ceil(remaining / 1000))
-			}
-		}
-		const initialId = setTimeout(updateCountdown, 0)
-		const id = setInterval(updateCountdown, 1000)
-		return () => {
-			clearTimeout(initialId)
-			clearInterval(id)
-		}
-	}, [rateLimitExpiresAt])
+	const { blocks, pushText, pushEvent, reset: resetDrain, cancel: cancelDrain, finishWhenDrained, queueRef } =
+		useBlockDrain<LoopEvent>({ intervalMs: 12 })
 
-	const stopDrain = useCallback(() => {
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
-	}, [])
-
-	const commitFinalPhase = useCallback(() => {
-		if (finalPhaseRef.current === null) return
-		setBlocks(prev => {
-			const last = prev[prev.length - 1]
-			if (last?.kind === 'text' && !last.done) {
-				return [...prev.slice(0, -1), { ...last, done: true }]
-			}
-			return prev
-		})
-		setPhase(finalPhaseRef.current)
-		finalPhaseRef.current = null
-	}, [])
-
-	const startDrain = useCallback(() => {
-		if (drainIntervalRef.current !== null) return
-		drainIntervalRef.current = setInterval(() => {
-			const seg = segQueueRef.current[0]
-			if (!seg) {
-				stopDrain()
-				commitFinalPhase()
-				return
-			}
-			if (seg.type === 'loop') {
-				segQueueRef.current.shift()
-				setBlocks(prev => {
-					const last = prev[prev.length - 1]
-					const closed = last?.kind === 'text' && !last.done
-						? [...prev.slice(0, -1), { ...last, done: true }]
-						: prev
-					return [...closed, { id: String(idRef.current++), kind: 'loop' as const, turn: seg.turn, message: seg.message }]
-				})
-			} else {
-				const char = seg.text[0]
-				seg.text = seg.text.slice(1)
-				if (seg.text.length === 0) segQueueRef.current.shift()
-				setBlocks(prev => {
-					const last = prev[prev.length - 1]
-					if (last?.kind === 'text' && !last.done) {
-						return [...prev.slice(0, -1), { ...last, text: last.text + char }]
-					}
-					return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
-				})
-			}
-		}, 12)
-	}, [stopDrain, commitFinalPhase])
-
-	useEffect(() => {
-		const socket = io(process.env.NEXT_PUBLIC_WS_URL ?? '/')
-		socketRef.current = socket
-
+	const socketRef = useSocket((socket) => {
 		socket.on('terminator:chunk', ({ text }: { text: string }) => {
-			const last = segQueueRef.current[segQueueRef.current.length - 1]
-			if (last?.type === 'text') {
-				last.text += text
-			} else {
-				segQueueRef.current.push({ type: 'text', text })
-			}
-			startDrain()
+			pushText(text)
 		})
 
 		socket.on('terminator:loop', ({ turn, message }: { turn: number; message: string }) => {
-			segQueueRef.current.push({ type: 'loop', turn, message })
+			pushEvent({ turn, message })
 		})
 
 		socket.on('terminator:trim', ({ count }: { count: number }) => {
 			let toRemove = count
-			while (toRemove > 0 && segQueueRef.current.length > 0) {
-				const last = segQueueRef.current[segQueueRef.current.length - 1]
+			while (toRemove > 0 && queueRef.current.length > 0) {
+				const last = queueRef.current[queueRef.current.length - 1]
 				if (last.type === 'text') {
 					if (last.text.length <= toRemove) {
 						toRemove -= last.text.length
-						segQueueRef.current.pop()
+						queueRef.current.pop()
 					} else {
 						last.text = last.text.slice(0, -toRemove)
 						toRemove = 0
 					}
 				} else {
-					segQueueRef.current.pop()
+					queueRef.current.pop()
 				}
 			}
 		})
 
 		socket.on('terminator:terminated', () => {
-			finalPhaseRef.current = 'terminated'
-			if (drainIntervalRef.current === null) commitFinalPhase()
+			finishWhenDrained(() => setPhase('terminated'))
 		})
 
 		socket.on('terminator:done', () => {
-			finalPhaseRef.current = 'done'
-			if (drainIntervalRef.current === null) commitFinalPhase()
+			finishWhenDrained(() => setPhase('done'))
 		})
 
 		socket.on('terminator:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
-			stopDrain()
-			segQueueRef.current = []
-			finalPhaseRef.current = null
+			cancelDrain()
 			if (retryAfterMs != null) {
-				setRateLimitExpiresAt(Date.now() + retryAfterMs)
+				triggerRateLimit(retryAfterMs)
 			}
 			setPhase('error')
 		})
-
-		return () => {
-			socket.disconnect()
-			stopDrain()
-		}
-	}, [startDrain, stopDrain, commitFinalPhase])
+	}, [pushText, pushEvent, queueRef, finishWhenDrained, cancelDrain, triggerRateLimit])
 
 	useEffect(() => {
 		const el = scrollRef.current
@@ -221,34 +112,23 @@ export default function TerminatorProject() {
 	const handleStart = useCallback(() => {
 		if (phase === 'thinking') return
 		setPhase('thinking')
-		setBlocks([])
-		finalPhaseRef.current = null
-		segQueueRef.current = []
-		stopDrain()
-		idRef.current = 0
+		resetDrain()
 		wasAtBottomRef.current = true
 		lastScrollDirectionRef.current = null
 		socketRef.current?.emit('terminator:start', { systemPrompt: systemPromptRef.current })
-	}, [phase, stopDrain])
+	}, [phase, resetDrain, socketRef])
 
 	const handleStop = useCallback(() => {
 		socketRef.current?.emit('terminator:cancel')
-		stopDrain()
-		segQueueRef.current = []
-		finalPhaseRef.current = null
-		setBlocks(prev => prev.map(b => b.kind === 'text' && !b.done ? { ...b, done: true } : b))
+		cancelDrain()
 		setPhase('idle')
-	}, [stopDrain])
+	}, [cancelDrain, socketRef])
 
 	const handleReset = useCallback(() => {
 		socketRef.current?.emit('terminator:cancel')
-		stopDrain()
-		segQueueRef.current = []
-		finalPhaseRef.current = null
-		setBlocks([])
-		idRef.current = 0
+		resetDrain()
 		setPhase('idle')
-	}, [stopDrain])
+	}, [resetDrain, socketRef])
 
 	function applyPreset(index: number) {
 		if (phase === 'thinking') handleStop()
@@ -256,24 +136,12 @@ export default function TerminatorProject() {
 		systemPromptRef.current = preset.systemPrompt
 		setSystemPrompt(preset.systemPrompt)
 		setSelectedPreset(index)
-		setBlocks([])
-		segQueueRef.current = []
-		stopDrain()
+		resetDrain()
 		setPhase('idle')
-	}
-
-	function formatCountdown(totalSeconds: number): string {
-		const hours = Math.floor(totalSeconds / 3600)
-		const minutes = Math.floor((totalSeconds % 3600) / 60)
-		const seconds = totalSeconds % 60
-		if (hours > 0) return `${hours}h ${minutes}m`
-		if (minutes > 0) return `${minutes}m ${seconds}s`
-		return `${seconds}s`
 	}
 
 	const isThinking = phase === 'thinking'
 	const hasTerminated = phase === 'terminated'
-	const isRateLimited = rateLimitExpiresAt !== null
 	const showLog = blocks.length > 0
 
 	return (
@@ -284,18 +152,13 @@ export default function TerminatorProject() {
 				</div>
 
 				<div className="border-b border-border/30 bg-border/5">
-					<div className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30">
-						<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
-						{TERMINATOR_SYSTEM_PRESETS.map((preset, i) => (
-							<button
-								key={preset.label}
-								onClick={() => applyPreset(i)}
-								className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
-							>
-								{preset.label}
-							</button>
-						))}
-					</div>
+					<PresetTabs
+						presets={TERMINATOR_SYSTEM_PRESETS}
+						getLabel={(preset) => preset.label}
+						selectedIndex={selectedPreset}
+						onSelect={applyPreset}
+						className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30"
+					/>
 					<textarea
 						aria-label="Agent system prompt"
 						value={systemPrompt}
@@ -368,7 +231,7 @@ export default function TerminatorProject() {
 				>
 					{blocks.map(block =>
 						block.kind === 'text'
-							? <TextBlock key={block.id} block={block} />
+							? <StreamingTextBlock key={block.id} text={block.text} done={block.done} />
 							: <LoopBlock key={block.id} block={block} />
 					)}
 				</div>

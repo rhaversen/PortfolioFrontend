@@ -64,4 +64,3 @@ body {
 .markdown-body hr { border-color: var(--border); margin: 0.75em 0; }
 .markdown-body strong { font-weight: 600; }
 .markdown-body em { font-style: italic; }
-.markdown-body.is-streaming > *:last-child::after { content: ''; display: inline-block; width: 0.25rem; height: 0.9em; background: rgba(255,255,255,0.3); vertical-align: middle; animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; margin-left: 1px; }

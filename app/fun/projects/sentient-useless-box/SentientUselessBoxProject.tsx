@@ -1,90 +1,67 @@
 'use client'
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { BOX_SYSTEM_PRESETS } from '../sampleData'
+import { useSocket } from '../shared/hooks/useSocket'
+import { useRateLimit, formatCountdown } from '../shared/hooks/useRateLimit'
+import { useBlockDrain, type DrainBlock } from '../shared/hooks/useBlockDrain'
+import { StreamingTextBlock } from '../shared/components/StreamingTextBlock'
+import { EventBlock } from '../shared/components/EventBlock'
+import { PresetTabs } from '../shared/components/PresetTabs'
 
 type BoxAction = 'turn_off' | 'turn_on'
 
 type MessageParam = { role: 'user' | 'assistant'; content: unknown }
 
-type Block =
-	| { id: string; kind: 'user'; text: string; timestamp: string }
-	| { id: string; kind: 'text'; text: string; done: boolean }
-	| { id: string; kind: 'tool'; name: BoxAction; timestamp: string }
+type UserBlockData = { id: string; kind: 'user'; text: string; timestamp: string }
+type ToolEvent = { toolName: BoxAction; ts: string }
+type Block = DrainBlock<ToolEvent, UserBlockData>
 
 type PendingAction = { type: 'done'; history: MessageParam[] }
-type QueueSegment = { type: 'text'; text: string } | { type: 'tool'; toolName: BoxAction; ts: string }
 
 const BOX_TOOL_LABELS: Record<BoxAction, string> = {
 	turn_off: 'Turn off',
 	turn_on: 'Turn on',
 }
 
-const UserBlock = memo(function UserBlock({ block }: { block: Extract<Block, { kind: 'user' }> }) {
+const UserBlock = memo(function UserBlock({ block }: { block: UserBlockData }) {
 	return (
-		<div className="px-4 py-3 bg-border/10">
-			<div className="flex items-center justify-between mb-1.5">
-				<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Event</p>
-				<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
-			</div>
+		<EventBlock label="Event" timestamp={block.timestamp} className="bg-border/10">
 			<p className="text-xs font-mono text-foreground/70">{block.text}</p>
-		</div>
+		</EventBlock>
 	)
 })
 
-const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { kind: 'tool' }> }) {
+const ToolBlock = memo(function ToolBlock({ block }: { block: Extract<Block, { kind: 'event' }> }) {
+	const { toolName, ts } = block.payload
 	const accent =
-		block.name === 'turn_off'
+		toolName === 'turn_off'
 			? 'border-foreground text-foreground'
 			: 'border-foreground/60 text-foreground/70'
 	return (
-		<div className="px-4 py-3 bg-background/60">
-			<div className="flex items-center justify-between mb-2">
-				<p className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Tool call</p>
-				<p className="text-[0.6rem] font-mono text-muted">{block.timestamp}</p>
-			</div>
+		<EventBlock label="Tool call" timestamp={ts} className="bg-background/60">
 			<span className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.65rem] font-mono uppercase tracking-widest ${accent}`}>
-				{BOX_TOOL_LABELS[block.name]}
+				{BOX_TOOL_LABELS[toolName]}
 			</span>
-		</div>
-	)
-})
-
-const TextBlock = memo(function TextBlock({ block }: { block: Extract<Block, { kind: 'text' }> }) {
-	return (
-		<div className="px-4 py-4 text-sm leading-relaxed text-foreground/90">
-			<div className={`markdown-body${!block.done ? ' is-streaming' : ''}`}>
-				<Markdown remarkPlugins={[remarkGfm]}>{block.text}</Markdown>
-			</div>
-		</div>
+		</EventBlock>
 	)
 })
 
 export default function SentientUselessBoxProject() {
 	const [switchOn, setSwitchOn] = useState(false)
-	const [blocks, setBlocks] = useState<Block[]>([])
 	const [isProcessing, setIsProcessing] = useState(false)
 	const [systemPrompt, setSystemPrompt] = useState(BOX_SYSTEM_PRESETS[0].systemPrompt)
 	const [selectedBoxPreset, setSelectedBoxPreset] = useState<number | null>(0)
-	const [rateLimitExpiresAt, setRateLimitExpiresAt] = useState<number | null>(null)
-	const [retryCountdown, setRetryCountdown] = useState(0)
+	const { rateLimitExpiresAt, retryCountdown, triggerRateLimit } = useRateLimit()
 	const systemPromptRef = useRef(BOX_SYSTEM_PRESETS[0].systemPrompt)
-	const socketRef = useRef<Socket | null>(null)
 	const historyRef = useRef<MessageParam[]>([])
 	const scrollRef = useRef<HTMLDivElement>(null)
-	const idRef = useRef(0)
 	const initialSentRef = useRef(false)
 	const sessionStartRef = useRef<number>(0)
 	const userScrolledUpRef = useRef(false)
 	const prevScrollTopRef = useRef(0)
-	const segQueueRef = useRef<QueueSegment[]>([])
-	const drainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const pendingActionsRef = useRef<PendingAction[]>([])
 	const revealedToolCallsRef = useRef(0)
-	const getId = () => String(idRef.current++)
 
 	const lastTimestampRef = useRef<number>(0)
 
@@ -98,6 +75,20 @@ export default function SentientUselessBoxProject() {
 		return minutes === 0 ? `+${seconds}s` : `+${minutes}m ${seconds}s`
 	}
 
+	const flushQueueRef = useRef<() => void>(() => {})
+
+	const { blocks, setBlocks, pushText, closeOpenText, reset: resetDrain, start: startDrain, stop: stopDrain, queueRef, idRef } = useBlockDrain<ToolEvent, UserBlockData>({
+		intervalMs: 15,
+		onEvent: ({ toolName }) => {
+			revealedToolCallsRef.current++
+			if (toolName === 'turn_off') setSwitchOn(false)
+			if (toolName === 'turn_on') setSwitchOn(true)
+		},
+		onDrained: () => flushQueueRef.current(),
+	})
+
+	const getId = () => String(idRef.current++)
+
 	const flushQueue = useCallback(() => {
 		const actions = pendingActionsRef.current.splice(0)
 		for (const action of actions) {
@@ -105,74 +96,16 @@ export default function SentientUselessBoxProject() {
 				historyRef.current = action.history
 				lastTimestampRef.current = Date.now()
 				revealedToolCallsRef.current = 0
-				setBlocks((prev) => {
-					const last = prev[prev.length - 1]
-					if (last?.kind === 'text' && !last.done) {
-						return [...prev.slice(0, -1), { ...last, done: true }]
-					}
-					return prev
-				})
+				closeOpenText()
 				setIsProcessing(false)
 			}
 		}
-	}, [])
-
-	const startDrain = useCallback(() => {
-		if (drainIntervalRef.current !== null) { return }
-		drainIntervalRef.current = setInterval(() => {
-			const seg = segQueueRef.current[0]
-			if (!seg) {
-				clearInterval(drainIntervalRef.current!)
-				drainIntervalRef.current = null
-				flushQueue()
-				return
-			}
-			if (seg.type === 'tool') {
-				segQueueRef.current.shift()
-				revealedToolCallsRef.current++
-				if (seg.toolName === 'turn_off') { setSwitchOn(false) }
-				if (seg.toolName === 'turn_on') { setSwitchOn(true) }
-				setBlocks((prev) => {
-					const last = prev[prev.length - 1]
-					const closed = last?.kind === 'text' && !last.done
-						? [...prev.slice(0, -1), { ...last, done: true }]
-						: prev
-					return [...closed, { id: String(idRef.current++), kind: 'tool' as const, name: seg.toolName, timestamp: seg.ts }]
-				})
-			} else {
-				const char = seg.text[0]
-				seg.text = seg.text.slice(1)
-				if (seg.text.length === 0) { segQueueRef.current.shift() }
-				setBlocks((prev) => {
-					const last = prev[prev.length - 1]
-					if (last?.kind === 'text' && !last.done) {
-						return [...prev.slice(0, -1), { ...last, text: last.text + char }]
-					}
-					return [...prev, { id: String(idRef.current++), kind: 'text' as const, text: char, done: false }]
-				})
-			}
-		}, 15)
+	}, [closeOpenText])
+	useEffect(() => {
+		flushQueueRef.current = flushQueue
 	}, [flushQueue])
 
-	useEffect(() => {
-		if (rateLimitExpiresAt === null) return
-		const id = setInterval(() => {
-			const remaining = rateLimitExpiresAt - Date.now()
-			if (remaining <= 0) {
-				setRateLimitExpiresAt(null)
-				setRetryCountdown(0)
-			} else {
-				setRetryCountdown(Math.ceil(remaining / 1000))
-			}
-		}, 1000)
-		return () => clearInterval(id)
-	}, [rateLimitExpiresAt])
-
-	useEffect(() => {
-		const apiUrl = process.env.NEXT_PUBLIC_WS_URL ?? '/'
-		const socket = io(apiUrl)
-		socketRef.current = socket
-
+	const socketRef = useSocket((socket) => {
 		socket.on('connect', () => {
 			if (initialSentRef.current) return
 			initialSentRef.current = true
@@ -181,23 +114,17 @@ export default function SentientUselessBoxProject() {
 			userScrolledUpRef.current = false
 			prevScrollTopRef.current = 0
 			setIsProcessing(true)
-			setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
+			setBlocks([{ id: getId(), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 			socket.emit('box:trigger', { toggleState: false, systemPrompt: systemPromptRef.current })
 		})
 
 		socket.on('box:chunk', ({ text }: { text: string }) => {
-			const last = segQueueRef.current[segQueueRef.current.length - 1]
-			if (last?.type === 'text') {
-				last.text += text
-			} else {
-				segQueueRef.current.push({ type: 'text', text })
-			}
-			startDrain()
+			pushText(text)
 		})
 
 		socket.on('box:toolCall', ({ toolName }: { toolName: BoxAction }) => {
 			const ts = getTimestamp()
-			segQueueRef.current.push({ type: 'tool', toolName, ts })
+			queueRef.current.push({ type: 'event', payload: { toolName, ts } })
 		})
 
 		socket.on('box:done', ({ history }: { toolCall: BoxAction | null; history: MessageParam[] }) => {
@@ -206,27 +133,15 @@ export default function SentientUselessBoxProject() {
 		})
 
 		socket.on('box:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
-			segQueueRef.current = []
+			queueRef.current = []
 			pendingActionsRef.current = []
-			if (drainIntervalRef.current !== null) {
-				clearInterval(drainIntervalRef.current)
-				drainIntervalRef.current = null
-			}
 			setIsProcessing(false)
 			if (retryAfterMs !== undefined && retryAfterMs > 0) {
-				setRateLimitExpiresAt(Date.now() + retryAfterMs)
-				setRetryCountdown(Math.ceil(retryAfterMs / 1000))
+				triggerRateLimit(retryAfterMs)
 			}
 		})
+	}, [pushText, queueRef, setBlocks, startDrain, triggerRateLimit])
 
-		return () => {
-			if (drainIntervalRef.current !== null) {
-				clearInterval(drainIntervalRef.current)
-				drainIntervalRef.current = null
-			}
-			socket.disconnect()
-		}
-	}, [startDrain])
 
 	useEffect(() => {
 		if (blocks.length === 0) { return }
@@ -243,44 +158,26 @@ export default function SentientUselessBoxProject() {
 		setSystemPrompt(preset.systemPrompt)
 		setSelectedBoxPreset(index)
 		socketRef.current?.emit('box:cancel')
-		segQueueRef.current = []
-		pendingActionsRef.current = []
 		revealedToolCallsRef.current = 0
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
+		resetDrain()
 		setSwitchOn(false)
 		setIsProcessing(true)
 		historyRef.current = []
-		// eslint-disable-next-line react-hooks/purity
+		 
 		const now = Date.now()
 		sessionStartRef.current = now
 		lastTimestampRef.current = now
-		userScrolledUpRef.current = false	
-		prevScrollTopRef.current = 0		
-		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
+		userScrolledUpRef.current = false
+		prevScrollTopRef.current = 0
+		setBlocks([{ id: getId(), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt: preset.systemPrompt })
 	}
 
-	function formatCountdown(totalSeconds: number): string {
-		const hours = Math.floor(totalSeconds / 3600)
-		const minutes = Math.floor((totalSeconds % 3600) / 60)
-		const seconds = totalSeconds % 60
-		if (hours > 0) return `${hours}h ${minutes}m`
-		if (minutes > 0) return `${minutes}m ${seconds}s`
-		return `${seconds}s`
-	}
-
 	function handleStop() {
-		segQueueRef.current = []
 		pendingActionsRef.current = []
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
-		setBlocks((prev) => prev.map((b) => b.kind === 'text' && !b.done ? { ...b, done: true } : b))
+		stopDrain()
+		closeOpenText()
 		setIsProcessing(false)
 		socketRef.current?.emit('box:cancel')
 	}
@@ -289,18 +186,14 @@ export default function SentientUselessBoxProject() {
 		setSwitchOn(false)
 		setIsProcessing(true)
 		historyRef.current = []
-		segQueueRef.current = []
 		pendingActionsRef.current = []
 		revealedToolCallsRef.current = 0
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
+		resetDrain()
 		sessionStartRef.current = Date.now()
 		lastTimestampRef.current = Date.now()
 		userScrolledUpRef.current = false
 		prevScrollTopRef.current = 0
-		setBlocks([{ id: String(idRef.current++), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
+		setBlocks([{ id: getId(), kind: 'user', text: 'The switch is currently OFF.', timestamp: 'start' }])
 		socketRef.current?.emit('box:reset')
 		socketRef.current?.emit('box:trigger', { toggleState: false, systemPrompt })
 	}
@@ -312,13 +205,10 @@ export default function SentientUselessBoxProject() {
 		const elapsedMs = Date.now() - (lastTimestampRef.current || sessionStartRef.current)
 		const ts = getTimestamp()
 
-		const remaining = segQueueRef.current.splice(0)
+		const remaining = queueRef.current.splice(0)
 		const pendingDone = pendingActionsRef.current.find(a => a.type === 'done')
 		pendingActionsRef.current = []
-		if (drainIntervalRef.current !== null) {
-			clearInterval(drainIntervalRef.current)
-			drainIntervalRef.current = null
-		}
+		stopDrain()
 
 		// Build a partial history reflecting only what was revealed during the drain
 		let overrideHistory: MessageParam[] | undefined
@@ -355,12 +245,11 @@ export default function SentientUselessBoxProject() {
 		revealedToolCallsRef.current = 0
 
 		// Keep only revealed blocks — close any in-progress text block, discard the rest
-		setBlocks((prev) => {
-			const closed = prev.map((b) =>
-				b.kind === 'text' && !b.done ? { ...b, done: true } : b,
-			)
-			return [...closed, { id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts }]
-		})
+		closeOpenText()
+		setBlocks((prev) => [
+			...prev,
+			{ id: getId(), kind: 'user' as const, text: newState ? 'The switch has been turned on.' : 'The switch has been turned off.', timestamp: ts },
+		])
 
 		socketRef.current?.emit('box:trigger', {
 			toggleState: newState,
@@ -377,18 +266,13 @@ export default function SentientUselessBoxProject() {
 					<span className="text-[0.6rem] font-mono uppercase tracking-widest text-muted">Agent system prompt</span>
 				</div>
 				<div className="border-b border-border/30 bg-border/5">
-					<div className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30">
-						<span className="text-[0.65rem] font-mono uppercase tracking-widest text-muted/60 self-center">Presets:</span>
-						{BOX_SYSTEM_PRESETS.map((preset, i) => (
-							<button
-								key={preset.label}
-								onClick={() => applyBoxPreset(i)}
-							className={`cursor-pointer border px-2 py-0.5 text-[0.65rem] font-mono transition-colors ${selectedBoxPreset === i ? 'border-blue-500 text-blue-400' : 'border-border text-foreground/70 hover:border-foreground/40 hover:text-foreground'}`}
-							>
-								{preset.label}
-							</button>
-						))}
-					</div>
+					<PresetTabs
+						presets={BOX_SYSTEM_PRESETS}
+						getLabel={(preset) => preset.label}
+						selectedIndex={selectedBoxPreset}
+						onSelect={applyBoxPreset}
+						className="flex flex-wrap gap-2 px-4 py-2 border-b border-border/30"
+					/>
 					<textarea
 						aria-label="Agent system prompt"
 						value={systemPrompt}
@@ -479,8 +363,8 @@ export default function SentientUselessBoxProject() {
 					<>
 					{blocks.map((block) => {
 						if (block.kind === 'user') return <UserBlock key={block.id} block={block} />
-						if (block.kind === 'text') return <TextBlock key={block.id} block={block} />
-						if (block.kind === 'tool') return <ToolBlock key={block.id} block={block} />
+						if (block.kind === 'text') return <StreamingTextBlock key={block.id} text={block.text} done={block.done} className="px-4 py-4 text-sm leading-relaxed text-foreground/90" />
+						if (block.kind === 'event') return <ToolBlock key={block.id} block={block} />
 						return null
 					})}
 					</>
