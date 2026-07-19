@@ -11,12 +11,11 @@ export type FetchTreeResult =
 	| { ok: true; root: TreeNode; truncated: boolean; totalNodes: number }
 	| { ok: false; error: string };
 
-const MAX_VIZ_NODES = 1200;
-
 interface GithubTreeItem {
 	path: string;
 	type: "blob" | "tree";
 	size?: number;
+	sha?: string;
 }
 
 interface GithubTreeResponse {
@@ -59,19 +58,75 @@ export async function fetchRepoTree(owner: string, repo: string): Promise<FetchT
 		return { ok: false, error: "Unexpected response format from GitHub API." };
 	}
 
-	const root = buildTree(repo, treeData.tree);
-	const totalNodes = countNodes(root);
+	let sourceTruncated = Boolean(treeData.truncated);
+	let items = treeData.tree;
 
-	if (totalNodes > MAX_VIZ_NODES) {
-		pruneToLimit(root, MAX_VIZ_NODES);
+	if (treeData.truncated) {
+		const rebuilt = await rebuildFromTopLevelSubtrees(owner, repo, defaultBranch);
+		if (rebuilt.ok) {
+			items = rebuilt.items;
+			sourceTruncated = rebuilt.truncated;
+		}
 	}
+
+	const root = buildTree(repo, items);
+	const totalNodes = countNodes(root);
 
 	return {
 		ok: true,
 		root,
-		truncated: treeData.truncated || totalNodes > MAX_VIZ_NODES,
+		truncated: sourceTruncated,
 		totalNodes,
 	};
+}
+
+async function rebuildFromTopLevelSubtrees(
+	owner: string,
+	repo: string,
+	defaultBranch: string,
+): Promise<{ ok: true; items: GithubTreeItem[]; truncated: boolean } | { ok: false }> {
+	const headers = { Accept: "application/vnd.github+json" };
+
+	let rootTree: GithubTreeResponse;
+	try {
+		const rootRes = await fetch(
+			`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${defaultBranch}`,
+			{ headers },
+		);
+		if (!rootRes.ok) return { ok: false };
+		rootTree = (await rootRes.json()) as GithubTreeResponse;
+	} catch {
+		return { ok: false };
+	}
+
+	if (!Array.isArray(rootTree.tree)) return { ok: false };
+
+	const merged = new Map<string, GithubTreeItem>();
+	let truncated = Boolean(rootTree.truncated);
+
+	for (const item of rootTree.tree) {
+		merged.set(item.path, item);
+		if (item.type !== "tree" || !item.sha) continue;
+
+		try {
+			const subRes = await fetch(
+				`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${item.sha}?recursive=1`,
+				{ headers },
+			);
+			if (!subRes.ok) continue;
+			const subTree = (await subRes.json()) as GithubTreeResponse;
+			if (!Array.isArray(subTree.tree)) continue;
+			truncated = truncated || Boolean(subTree.truncated);
+			for (const child of subTree.tree) {
+				const path = `${item.path}/${child.path}`;
+				merged.set(path, { ...child, path });
+			}
+		} catch {
+			continue;
+		}
+	}
+
+	return { ok: true, items: [...merged.values()], truncated };
 }
 
 function rateLimitError(res: Response): { ok: false; error: string } {
@@ -133,26 +188,4 @@ function calcSize(node: TreeNode): number {
 
 export function countNodes(node: TreeNode): number {
 	return 1 + node.children.reduce((sum, c) => sum + countNodes(c), 0);
-}
-
-function pruneToLimit(root: TreeNode, max: number): void {
-	// BFS order: collect all nodes breadth-first, keep first `max`
-	const queue: Array<{ node: TreeNode; parent: TreeNode | null }> = [{ node: root, parent: null }];
-	const inOrder: TreeNode[] = [];
-
-	while (queue.length > 0) {
-		const { node } = queue.shift()!;
-		inOrder.push(node);
-		for (const child of node.children) {
-			queue.push({ node: child, parent: node });
-		}
-	}
-
-	const keepSet = new Set<TreeNode>(inOrder.slice(0, max));
-
-	const prune = (node: TreeNode) => {
-		node.children = node.children.filter((c) => keepSet.has(c));
-		for (const c of node.children) prune(c);
-	};
-	prune(root);
 }
