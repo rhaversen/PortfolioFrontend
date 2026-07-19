@@ -5,12 +5,15 @@ import * as THREE from "three";
 import { countNodes, type TreeNode } from "./treeParser";
 
 // ---- Simulation constants ----
-const SPRING_K   = 0.018;   // edge spring constant
+const SPRING_K   = 0.010;   // edge spring constant
 const REPULSION  = 2800;    // node-node repulsion
 const DAMPING    = 0.88;    // velocity damping per step
-const CENTER_K   = 0.0005;  // weak gravity toward origin
+const CENTER_K   = 0.00022; // weak gravity toward origin
 const GRID_CELL  = 160;     // spatial hash cell size
 const SIM_STEPS  = 3;       // physics steps per rendered frame
+const MIN_ZOOM   = 80;
+const MAX_ZOOM   = 6000;
+const ZOOM_SPEED = 0.0012;
 
 // ---- Rendering constants ----
 const BG_COLOR = 0x0b0b0b;
@@ -39,15 +42,32 @@ type SimNode = {
 	x: number; y: number;
 	vx: number; vy: number;
 	radius: number;
+	collisionRadius: number;
 	mass: number;
 	r: number; g: number; b: number;
 	fixed: boolean;
 	isDir: boolean;
 	parentNodeIdx: number;
+	localX: number;
+	localY: number;
 	treeNode: TreeNode;
 };
 
-type SimEdge = { a: number; b: number; restLen: number };
+type SimEdge = { a: number; b: number; restLen: number; physics: boolean };
+
+type FilePlacement = {
+	x: number;
+	y: number;
+	radius: number;
+};
+
+type DirPlan = {
+	visualRadius: number;
+	islandRadius: number;
+	dirChildren: TreeNode[];
+	fileChildren: TreeNode[];
+	filePlacements: Map<string, FilePlacement>;
+};
 
 // ---- Helpers ----
 function hexToRgb(hex: number): [number, number, number] {
@@ -66,19 +86,107 @@ function nodeRadius(node: TreeNode): number {
 	return 2.5 + Math.min(Math.log(node.size / 800 + 1) * 1.8, 7);
 }
 
+function packFilesConcentric(files: TreeNode[], folderVisualRadius: number): {
+	placements: Map<string, FilePlacement>;
+	extent: number;
+} {
+	const placements = new Map<string, FilePlacement>();
+	if (files.length === 0) return { placements, extent: folderVisualRadius + 4 };
+
+	const FILE_GAP = 2.1;
+	const RING_GAP = 3.6;
+	const BORDER_PAD = 4;
+
+	const sorted = [...files]
+		.map((file) => ({ file, radius: nodeRadius(file) }))
+		.sort((a, b) => b.radius - a.radius);
+
+	let idx = 0;
+	let ringCenterRadius = folderVisualRadius + sorted[0].radius + 4;
+	let outerExtent = folderVisualRadius;
+
+	while (idx < sorted.length) {
+		const ring: Array<{ node: TreeNode; radius: number }> = [];
+		const ringCircumference = 2 * Math.PI * ringCenterRadius;
+		let usedArc = 0;
+
+		while (idx < sorted.length) {
+			const candidate = sorted[idx];
+			const neededArc = 2 * (candidate.radius + FILE_GAP);
+			if (ring.length > 0 && usedArc + neededArc > ringCircumference * 0.97) break;
+			ring.push({ node: candidate.file, radius: candidate.radius });
+			usedArc += neededArc;
+			idx++;
+		}
+
+		if (ring.length === 0) {
+			ringCenterRadius += RING_GAP + 2;
+			continue;
+		}
+
+		let angle = 0;
+		for (const item of ring) {
+			const span = (2 * (item.radius + FILE_GAP) / usedArc) * Math.PI * 2;
+			const theta = angle + span / 2;
+			const x = Math.cos(theta) * ringCenterRadius;
+			const y = Math.sin(theta) * ringCenterRadius;
+			placements.set(item.node.id, { x, y, radius: item.radius });
+			angle += span;
+		}
+
+		const ringMaxRadius = Math.max(...ring.map((item) => item.radius));
+		outerExtent = Math.max(outerExtent, ringCenterRadius + ringMaxRadius + BORDER_PAD);
+		if (idx < sorted.length) {
+			ringCenterRadius += ringMaxRadius + sorted[idx].radius + RING_GAP;
+		}
+	}
+
+	return { placements, extent: outerExtent };
+}
+
 function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function buildDirPlans(root: TreeNode): Map<string, DirPlan> {
+	const planMap = new Map<string, DirPlan>();
+
+	const visit = (node: TreeNode) => {
+		if (!node.isDir) return;
+		const dirChildren = node.children.filter((child) => child.isDir);
+		const fileChildren = node.children.filter((child) => !child.isDir);
+		const visualRadius = nodeRadius(node);
+		const packed = packFilesConcentric(fileChildren, visualRadius);
+
+		planMap.set(node.id, {
+			visualRadius,
+			islandRadius: Math.max(visualRadius + 3, packed.extent),
+			dirChildren,
+			fileChildren,
+			filePlacements: packed.placements,
+		});
+
+		for (const child of dirChildren) visit(child);
+	};
+
+	visit(root);
+	return planMap;
+}
+
 // ---- Build simulation from tree ----
 function buildSim(root: TreeNode): { nodes: SimNode[]; edges: SimEdge[] } {
 	const nodes: SimNode[] = [];
 	const edges: SimEdge[] = [];
+	const dirPlans = buildDirPlans(root);
 
-	function visit(node: TreeNode, parentIdx: number, depth: number, angle: number, spread: number) {
-		const restLen = node.isDir ? 75 + depth * 10 : 48;
+	function visitDir(node: TreeNode, parentIdx: number, depth: number, angle: number, spread: number) {
+		const plan = dirPlans.get(node.id);
+		if (!plan) return;
+
+		const parentIsland = parentIdx < 0 ? 0 : nodes[parentIdx].collisionRadius;
+		const restLen = parentIdx < 0 ? 0 : parentIsland + plan.islandRadius + 26 + depth * 7;
 		const px = parentIdx < 0 ? 0 : nodes[parentIdx].x + Math.cos(angle) * restLen;
 		const py = parentIdx < 0 ? 0 : nodes[parentIdx].y + Math.sin(angle) * restLen;
 
@@ -90,41 +198,90 @@ function buildSim(root: TreeNode): { nodes: SimNode[]; edges: SimEdge[] } {
 			x: px + (Math.random() - 0.5) * 8,
 			y: py + (Math.random() - 0.5) * 8,
 			vx: 0, vy: 0,
-			radius: nodeRadius(node),
-			mass: node.isDir ? 2 : 1,
+			radius: plan.visualRadius,
+			collisionRadius: plan.islandRadius,
+			mass: 2 + plan.islandRadius * 0.03,
 			r, g, b,
 			fixed: !node.path,
-			isDir: node.isDir,
+			isDir: true,
 			parentNodeIdx: parentIdx,
+			localX: 0,
+			localY: 0,
 			treeNode: node,
 		});
 
-		if (parentIdx >= 0) edges.push({ a: parentIdx, b: idx, restLen });
+		if (parentIdx >= 0) edges.push({ a: parentIdx, b: idx, restLen, physics: true });
 
-		const childCount = node.children.length;
+		for (const fileNode of plan.fileChildren) {
+			const placement = plan.filePlacements.get(fileNode.id);
+			if (!placement) continue;
+			const [fr, fg, fb] = hexToRgb(getFileColor(fileNode.name));
+			const fileIdx = nodes.length;
+			nodes.push({
+				x: nodes[idx].x + placement.x,
+				y: nodes[idx].y + placement.y,
+				vx: 0,
+				vy: 0,
+				radius: placement.radius,
+				collisionRadius: placement.radius,
+				mass: 1,
+				r: fr,
+				g: fg,
+				b: fb,
+				fixed: true,
+				isDir: false,
+				parentNodeIdx: idx,
+				localX: placement.x,
+				localY: placement.y,
+				treeNode: fileNode,
+			});
+			edges.push({
+				a: idx,
+				b: fileIdx,
+				restLen: Math.hypot(placement.x, placement.y),
+				physics: false,
+			});
+		}
+
+		const childCount = plan.dirChildren.length;
 		if (childCount === 0) return;
 		const step = Math.min(spread, Math.PI * 1.9) / childCount;
-		node.children.forEach((child, i) => {
-			visit(child, idx, depth + 1, angle - step * (childCount - 1) / 2 + step * i, Math.max(step * 1.2, 0.5));
+		plan.dirChildren.forEach((child, i) => {
+			visitDir(
+				child,
+				idx,
+				depth + 1,
+				angle - step * (childCount - 1) / 2 + step * i,
+				Math.max(step * 1.2, 0.55),
+			);
 		});
 	}
 
-	visit(root, -1, 0, 0, Math.PI * 2);
+	visitDir(root, -1, 0, 0, Math.PI * 2);
 	return { nodes, edges };
 }
 
 // ---- One simulation step: spring edges + repulsion + center gravity ----
-function stepSim(nodes: SimNode[], edges: SimEdge[]) {
+function stepSim(nodes: SimNode[], edges: SimEdge[], cooling: number) {
 	const n = nodes.length;
 	const fx = new Float64Array(n);
 	const fy = new Float64Array(n);
+	const dirIndices: number[] = [];
+	const repulsionScale = 0.35 + 0.65 * cooling;
+	const dynamicDamping = Math.max(0.74, DAMPING - (1 - cooling) * 0.14);
+	const maxSpeed = 4 + 16 * cooling;
+
+	for (let i = 0; i < n; i++) {
+		if (nodes[i].isDir) dirIndices.push(i);
+	}
 
 	// Spring forces along edges
-	for (const { a, b, restLen } of edges) {
+	for (const { a, b, restLen, physics } of edges) {
+		if (!physics) continue;
 		const na = nodes[a], nb = nodes[b];
 		const dx = nb.x - na.x, dy = nb.y - na.y;
 		const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
-		const f = SPRING_K * (dist - restLen);
+		const f = SPRING_K * (0.42 + 0.28 * cooling) * (dist - restLen);
 		const ux = dx / dist, uy = dy / dist;
 		fx[a] += f * ux; fy[a] += f * uy;
 		fx[b] -= f * ux; fy[b] -= f * uy;
@@ -132,13 +289,13 @@ function stepSim(nodes: SimNode[], edges: SimEdge[]) {
 
 	// All-pairs repulsion via spatial grid
 	const grid = new Map<number, number[]>();
-	for (let i = 0; i < n; i++) {
+	for (const i of dirIndices) {
 		const cx = Math.floor(nodes[i].x / GRID_CELL) + 100;
 		const cy = Math.floor(nodes[i].y / GRID_CELL) + 100;
 		const k = cx * 1000 + cy;
 		let cell = grid.get(k); if (!cell) { cell = []; grid.set(k, cell); } cell.push(i);
 	}
-	for (let i = 0; i < n; i++) {
+	for (const i of dirIndices) {
 		const na = nodes[i];
 		const cx = Math.floor(na.x / GRID_CELL) + 100;
 		const cy = Math.floor(na.y / GRID_CELL) + 100;
@@ -153,7 +310,9 @@ function stepSim(nodes: SimNode[], edges: SimEdge[]) {
 					const dist2 = dx * dx + dy * dy;
 					if (dist2 < 1) continue;
 					const dist = Math.sqrt(dist2);
-					const f = REPULSION / dist2;
+					const islandFactor = (na.collisionRadius + nb.collisionRadius) * 0.34;
+					const overlap = Math.max(0, na.collisionRadius + nb.collisionRadius + 8 - dist);
+					const f = ((REPULSION * repulsionScale * islandFactor) / dist2) + overlap * 0.32;
 					const ux = dx / dist, uy = dy / dist;
 					fx[i] -= f * ux; fy[i] -= f * uy;
 					fx[j] += f * ux; fy[j] += f * uy;
@@ -163,14 +322,36 @@ function stepSim(nodes: SimNode[], edges: SimEdge[]) {
 	}
 
 	// Center gravity + integrate
-	for (let i = 0; i < n; i++) {
+	for (const i of dirIndices) {
 		if (nodes[i].fixed) continue;
 		fx[i] -= CENTER_K * nodes[i].x;
 		fy[i] -= CENTER_K * nodes[i].y;
-		nodes[i].vx = (nodes[i].vx + fx[i] / nodes[i].mass) * DAMPING;
-		nodes[i].vy = (nodes[i].vy + fy[i] / nodes[i].mass) * DAMPING;
+		nodes[i].vx = (nodes[i].vx + fx[i] / nodes[i].mass) * dynamicDamping;
+		nodes[i].vy = (nodes[i].vy + fy[i] / nodes[i].mass) * dynamicDamping;
+
+		const speed = Math.hypot(nodes[i].vx, nodes[i].vy);
+		if (speed > maxSpeed) {
+			const s = maxSpeed / speed;
+			nodes[i].vx *= s;
+			nodes[i].vy *= s;
+		} else if (speed < 0.003) {
+			nodes[i].vx = 0;
+			nodes[i].vy = 0;
+		}
+
 		nodes[i].x += nodes[i].vx;
 		nodes[i].y += nodes[i].vy;
+	}
+
+	for (let i = 0; i < n; i++) {
+		const node = nodes[i];
+		if (node.isDir) continue;
+		if (node.parentNodeIdx < 0) continue;
+		const parent = nodes[node.parentNodeIdx];
+		node.x = parent.x + node.localX;
+		node.y = parent.y + node.localY;
+		node.vx = 0;
+		node.vy = 0;
 	}
 }
 
@@ -215,6 +396,7 @@ export default function RepoTreeViz({
 		const circleMat = new THREE.MeshBasicMaterial();
 		const iMesh = new THREE.InstancedMesh(circleGeo, circleMat, nodes.length);
 		iMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+		iMesh.frustumCulled = false;
 		// Pre-initialize instanceColor buffer
 		const colorData = new Float32Array(nodes.length * 3);
 		iMesh.instanceColor = new THREE.InstancedBufferAttribute(colorData, 3);
@@ -228,6 +410,7 @@ export default function RepoTreeViz({
 		lineGeo.setAttribute("position", linePosAttr);
 		const lineMat = new THREE.LineBasicMaterial({ color: EDGE_COLOR, transparent: true, opacity: 0.55 });
 		const lineSegments = new THREE.LineSegments(lineGeo, lineMat);
+		lineSegments.frustumCulled = false;
 		scene.add(lineSegments);
 
 		// --- Update Three.js objects from simulation ---
@@ -263,7 +446,8 @@ export default function RepoTreeViz({
 
 		const onWheel = (e: WheelEvent) => {
 			e.preventDefault();
-			camera.position.z = Math.max(80, Math.min(6000, camera.position.z + e.deltaY * 0.6));
+			const zoomFactor = Math.exp(e.deltaY * ZOOM_SPEED);
+			camera.position.z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, camera.position.z * zoomFactor));
 		};
 		const onMouseDown = (e: MouseEvent) => {
 			isPanning = true;
@@ -288,9 +472,12 @@ export default function RepoTreeViz({
 			}
 
 			if (!isPanning) return;
-			const scale = camera.position.z * 0.00085;
-			camera.position.x -= (e.clientX - lastX) * scale;
-			camera.position.y += (e.clientY - lastY) * scale;
+			const dx = e.clientX - lastX;
+			const dy = e.clientY - lastY;
+			const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z;
+			const worldPerPixel = visibleHeight / rect.height;
+			camera.position.x -= dx * worldPerPixel;
+			camera.position.y += dy * worldPerPixel;
 			lastX = e.clientX;
 			lastY = e.clientY;
 		};
@@ -305,6 +492,7 @@ export default function RepoTreeViz({
 		// --- Animation loop: runs until kinetic energy settles ---
 		let animId: number;
 		let frame = 0;
+		let energyEma = 0;
 
 		const animate = () => {
 			animId = requestAnimationFrame(animate);
@@ -313,12 +501,11 @@ export default function RepoTreeViz({
 			let totalKE = 0;
 			for (const n of nodes) totalKE += n.vx * n.vx + n.vy * n.vy;
 			const avgKE = nodes.length > 0 ? totalKE / nodes.length : 0;
-			// Bootstrap: forces are zero at frame 0 so KE starts at 0 — always run
-			// for the first 200 frames to let the simulation get moving, then switch
-			// to KE-based control so it continues until actually settled.
-			const steps = frame < 200 || avgKE > 0.06 ? SIM_STEPS : avgKE > 0.002 ? 1 : 0;
+			energyEma = frame === 0 ? avgKE : energyEma * 0.92 + avgKE * 0.08;
+			const cooling = frame < 180 ? 1 : Math.max(0.25, Math.exp(-(frame - 180) / 700));
+			const steps = frame < 180 ? SIM_STEPS : energyEma > 0.02 ? 2 : energyEma > 0.001 ? 1 : 0;
 
-			for (let i = 0; i < steps; i++) stepSim(nodes, edges);
+			for (let i = 0; i < steps; i++) stepSim(nodes, edges, cooling);
 			if (steps > 0 || frame === 0) updateScene();
 			renderer.render(scene, camera);
 			frame++;
