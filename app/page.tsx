@@ -1,11 +1,14 @@
 import ProjectShowcase from "./components/ProjectShowcase";
 import GameOfLifeBg from "./components/GameOfLifeBg";
 import ObfuscatedEmail from "./components/ObfuscatedEmail";
+import AuthNav from "./components/AuthNav";
 
 export default function Home() {
 	return (
 		<div className="relative min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_p]:text-[0.94rem] [&_p]:leading-7 [&_p]:text-foreground/90 [&_h1]:tracking-[-0.01em] [&_h2]:tracking-[0.01em] [&_h4]:tracking-[0.01em] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<GameOfLifeBg />
+
+			<AuthNav />
 
 			<section className="w-full border-y border-border bg-card/80 relative">
 				<a

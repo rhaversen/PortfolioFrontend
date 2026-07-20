@@ -1,0 +1,227 @@
+'use client'
+
+import { AxiosError } from 'axios'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import React, { type ReactElement, Suspense, useCallback, useEffect, useState } from 'react'
+
+import PasswordInput from '@/app/components/PasswordInput'
+import { useError } from '@/app/contexts/ErrorContext/ErrorContext'
+import { useUser } from '@/app/contexts/UserProvider'
+import { VisibilityOffIcon, VisibilityIcon } from '@/app/components/icons'
+import api from '@/app/lib/api'
+import { type UserType } from '@/app/types/backendDataTypes'
+
+function SignupContent (): ReactElement {
+	const router = useRouter()
+	const searchParams = useSearchParams()
+	const initialEmail = searchParams.get('email') ?? ''
+	const { addError } = useError()
+	const { refetchUser } = useUser()
+	const [formError, setFormError] = useState('')
+	const [isSubmitting, setIsSubmitting] = useState(false)
+	const [showPasswords, setShowPasswords] = useState(false)
+	const [formData, setFormData] = useState({
+		email: initialEmail,
+		password: '',
+		confirmPassword: ''
+	})
+	const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null)
+	const isFormValid = formData.email.length > 0 && formData.password.length >= 4 && (passwordsMatch ?? false)
+
+	const signup = useCallback(async (userData: { email: string, password: string, confirmPassword: string }) => {
+		try {
+			const response = await api.post<{ auth: boolean, user: UserType }>('/v1/users', {
+				email: userData.email,
+				password: userData.password,
+				confirmPassword: userData.confirmPassword
+			})
+			await refetchUser()
+			router.push(`/account/${response.data.user._id}`)
+		} catch (error) {
+			const axiosError = error as AxiosError
+			if (axiosError.response?.status === 401) {
+				setFormError('User already exists but the password is incorrect')
+				return
+			}
+			addError(error)
+		}
+	}, [addError, router, refetchUser])
+
+	useEffect(() => {
+		api.get('/v1/auth/is-authenticated')
+			.then(() => { router.push('/') })
+			.catch(() => { /* Not authenticated */ })
+	}, [router])
+
+	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+		const newFormData = {
+			...formData,
+			[e.target.name]: e.target.value
+		}
+		setFormData(newFormData)
+
+		if (e.target.name === 'password' || e.target.name === 'confirmPassword') {
+			if (newFormData.password === '' && newFormData.confirmPassword === '') {
+				setPasswordsMatch(null)
+			} else {
+				const isLongEnough = newFormData.password.length >= 4
+				const doPasswordsMatch = newFormData.password === newFormData.confirmPassword
+				setPasswordsMatch(isLongEnough && doPasswordsMatch)
+			}
+		}
+	}
+
+	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFormError('')
+		setIsSubmitting(true)
+
+		if (!(passwordsMatch ?? false)) {
+			setFormError(formData.password.length < 4
+				? 'Password must be at least 4 characters long'
+				: 'Passwords do not match')
+			setIsSubmitting(false)
+			return
+		}
+
+		signup(formData)
+			.catch((error) => {
+				setFormError('Failed to create account. Please try again.')
+				addError(error)
+				setIsSubmitting(false)
+			})
+	}, [addError, signup, formData, passwordsMatch])
+
+	return (
+		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
+			<section className="w-full border-y border-border bg-card/80">
+				<div className="max-w-4xl mx-auto px-6 py-5 sm:py-8">
+					<Link
+						href="/"
+						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90 decoration-transparent transition-colors duration-150 hover:decoration-current"
+					>
+						← Back To Portfolio
+					</Link>
+					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight mt-4">Create Account</h1>
+				</div>
+			</section>
+
+			<main className="max-w-4xl mx-auto px-6 py-10 relative">
+				<div className="border border-border bg-card/80 p-5 sm:p-6 max-w-md">
+					<form className="space-y-6" onSubmit={handleSubmit}>
+						<div className="space-y-2">
+							<label htmlFor="email" className="block text-xs font-mono uppercase tracking-widest text-muted">
+								Email
+							</label>
+							<input
+								type="email"
+								id="email"
+								name="email"
+								value={formData.email}
+								onChange={handleInputChange}
+								autoComplete="email"
+								className="block w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
+								required />
+						</div>
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<label htmlFor="password" className="block text-xs font-mono uppercase tracking-widest text-muted">
+									Password (min 4 chars)
+								</label>
+								<button
+									type="button"
+									onClick={() => { setShowPasswords(!showPasswords) }}
+									className="text-muted hover:text-foreground transition-colors"
+									aria-label="Toggle password visibility"
+								>
+									{showPasswords ? <VisibilityOffIcon /> : <VisibilityIcon />}
+								</button>
+							</div>
+							<PasswordInput
+								name="password"
+								value={formData.password}
+								placeholder="Password"
+								onChange={handleInputChange}
+								inputType={showPasswords ? 'text' : 'password'}
+								borderColor={
+									passwordsMatch === false
+										? 'border-accent'
+										: passwordsMatch === true ? 'border-accent' : ''
+								}
+							/>
+						</div>
+						<div className="space-y-2">
+							<label htmlFor="confirmPassword" className="block text-xs font-mono uppercase tracking-widest text-muted">
+								Confirm Password
+							</label>
+							<PasswordInput
+								name="confirmPassword"
+								value={formData.confirmPassword}
+								placeholder="Confirm password"
+								onChange={handleInputChange}
+								inputType={showPasswords ? 'text' : 'password'}
+								borderColor={
+									passwordsMatch === false
+										? 'border-accent'
+										: passwordsMatch === true ? 'border-accent' : ''
+								}
+							/>
+							{passwordsMatch === false && (
+								<span className="text-sm text-accent">
+									{formData.password.length < 4
+										? 'Password must be at least 4 characters'
+										: 'Passwords do not match'}
+								</span>
+							)}
+						</div>
+
+						<button
+							type="submit"
+							disabled={!isFormValid || isSubmitting}
+							className={`w-full px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
+									${(!isFormValid || isSubmitting) ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90 cursor-pointer'}`}
+						>
+							{isSubmitting ? 'Creating account...' : 'Sign up'}
+						</button>
+					</form>
+
+					{formError.length > 0 && (
+						<div className="border-t border-border pt-4 mt-6">
+							<p className="text-sm text-accent text-center">{formError}</p>
+						</div>
+					)}
+				</div>
+				<div className="flex flex-col items-start mt-5 space-y-2 max-w-md">
+					<p className="text-sm text-muted">
+						Already have an account?{' '}
+					<Link href={`/login${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+							className="font-mono text-accent decoration-transparent transition-colors duration-150 hover:decoration-current">
+							Log in
+						</Link>
+					</p>
+				<Link href={`/forgot-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+						className="text-sm text-muted decoration-transparent transition-colors duration-150 hover:decoration-current">
+						Forgot password?
+					</Link>
+				</div>
+			</main>
+		</div>
+	)
+}
+
+export default function Page (): ReactElement {
+	return (
+		<Suspense fallback={
+			<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
+				<section className="w-full border-y border-border bg-card/80">
+					<div className="max-w-4xl mx-auto px-6 py-5 sm:py-8">
+						<p className="text-sm text-muted font-mono">Loading...</p>
+					</div>
+				</section>
+			</div>
+		}>
+			<SignupContent />
+		</Suspense>
+	)
+}
