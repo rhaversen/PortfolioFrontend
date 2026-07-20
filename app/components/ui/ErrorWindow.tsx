@@ -76,7 +76,7 @@ const ErrorWindow = ({
 				</button>
 			</div>
 			<div
-				className={`ml-1 h-1 bg-accent transition-transform ${timeoutAnimation ? 'duration-[5000ms]' : 'duration-0'} origin-right ease-linear transform ${timeoutAnimation !== false && 'translate-x-full'}`}
+				className={`ml-1 h-1 bg-accent transition-transform ${timeoutAnimation ? 'duration-5000' : 'duration-0'} origin-right ease-linear transform ${timeoutAnimation !== false && 'translate-x-full'}`}
 			/>
 		</div>
 	)

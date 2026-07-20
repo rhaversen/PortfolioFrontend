@@ -107,7 +107,7 @@ function ResetPasswordContent (): ReactElement {
 									/>
 									<Link
 									href={`/forgot-password${queryEmail ? `?email=${encodeURIComponent(queryEmail)}` : ''}`}
-										className="flex-shrink-0 flex items-center justify-center px-3 py-2 border border-border bg-surface text-muted hover:text-accent hover:bg-card transition-colors"
+										className="shrink-0 flex items-center justify-center px-3 py-2 border border-border bg-surface text-muted hover:text-accent hover:bg-card transition-colors"
 										aria-label="Get reset code"
 										title="Get reset code"
 									>
