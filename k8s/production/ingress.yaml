@@ -9,11 +9,11 @@ spec:
     ingressClassName: nginx
     tls:
         -   hosts:
-                - rhaversen.dk
-                - www.rhaversen.dk
+                - rhaversen.com
+                - www.rhaversen.com
             secretName: frontend-tls
     rules:
-        -   host: rhaversen.dk
+        -   host: rhaversen.com
             http:
                 paths:
                     -   backend:
@@ -23,7 +23,7 @@ spec:
                                     number: 80
                         path: /
                         pathType: Prefix
-        -   host: www.rhaversen.dk
+        -   host: www.rhaversen.com
             http:
                 paths:
                     -   backend:
