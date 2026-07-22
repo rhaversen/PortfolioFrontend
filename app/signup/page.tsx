@@ -21,20 +21,23 @@ function SignupContent (): ReactElement {
 	const [formError, setFormError] = useState('')
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [showPasswords, setShowPasswords] = useState(false)
+	const [step, setStep] = useState<1 | 2>(1)
 	const [formData, setFormData] = useState({
 		email: initialEmail,
 		password: '',
-		confirmPassword: ''
+		confirmPassword: '',
+		username: ''
 	})
 	const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null)
-	const isFormValid = formData.email.length > 0 && formData.password.length >= 4 && (passwordsMatch ?? false)
+	const isCredentialsValid = formData.email.length > 0 && formData.password.length >= 4 && (passwordsMatch ?? false)
 
-	const signup = useCallback(async (userData: { email: string, password: string, confirmPassword: string }) => {
+	const signup = useCallback(async (userData: { email: string, password: string, confirmPassword: string, username: string }) => {
 		try {
 			const response = await api.post<{ auth: boolean, user: UserType }>('/v1/users', {
 				email: userData.email,
 				password: userData.password,
-				confirmPassword: userData.confirmPassword
+				confirmPassword: userData.confirmPassword,
+				username: userData.username
 			})
 			await refetchUser()
 			router.push(`/accounts/${response.data.user._id}`)
@@ -72,18 +75,24 @@ function SignupContent (): ReactElement {
 		}
 	}
 
-	const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+	const handleCredentialsSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
 		setFormError('')
-		setIsSubmitting(true)
 
 		if (!(passwordsMatch ?? false)) {
 			setFormError(formData.password.length < 4
 				? 'Password must be at least 4 characters long'
 				: 'Passwords do not match')
-			setIsSubmitting(false)
 			return
 		}
+
+		setStep(2)
+	}, [passwordsMatch, formData.password.length])
+
+	const handleUsernameSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault()
+		setFormError('')
+		setIsSubmitting(true)
 
 		signup(formData)
 			.catch((error) => {
@@ -91,7 +100,7 @@ function SignupContent (): ReactElement {
 				addError(error)
 				setIsSubmitting(false)
 			})
-	}, [addError, signup, formData, passwordsMatch])
+	}, [addError, signup, formData])
 
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
@@ -109,82 +118,123 @@ function SignupContent (): ReactElement {
 
 			<main className="max-w-4xl mx-auto px-6 py-10 relative">
 				<div className="border border-border bg-card/80 p-5 sm:p-6 max-w-md">
-					<form className="space-y-6" onSubmit={handleSubmit}>
-						<div className="space-y-2">
-							<label htmlFor="email" className="block text-xs font-mono uppercase tracking-widest text-muted">
-								Email
-							</label>
-							<input
-								type="email"
-								id="email"
-								name="email"
-								value={formData.email}
-								onChange={handleInputChange}
-								autoComplete="email"
-								className="block w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
-								required />
-						</div>
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<label htmlFor="password" className="block text-xs font-mono uppercase tracking-widest text-muted">
-									Password (min 4 chars)
-								</label>
-								<button
-									type="button"
-									onClick={() => { setShowPasswords(!showPasswords) }}
-									className="text-muted hover:text-foreground transition-colors"
-									aria-label="Toggle password visibility"
-								>
-									{showPasswords ? <VisibilityOffIcon /> : <VisibilityIcon />}
-								</button>
-							</div>
-							<PasswordInput
-								name="password"
-								value={formData.password}
-								placeholder="Password"
-								onChange={handleInputChange}
-								inputType={showPasswords ? 'text' : 'password'}
-								borderColor={
-									passwordsMatch === false
-										? 'border-accent'
-										: passwordsMatch === true ? 'border-accent' : ''
-								}
-							/>
-						</div>
-						<div className="space-y-2">
-							<label htmlFor="confirmPassword" className="block text-xs font-mono uppercase tracking-widest text-muted">
-								Confirm Password
-							</label>
-							<PasswordInput
-								name="confirmPassword"
-								value={formData.confirmPassword}
-								placeholder="Confirm password"
-								onChange={handleInputChange}
-								inputType={showPasswords ? 'text' : 'password'}
-								borderColor={
-									passwordsMatch === false
-										? 'border-accent'
-										: passwordsMatch === true ? 'border-accent' : ''
-								}
-							/>
-							{passwordsMatch === false && (
-								<span className="text-sm text-accent">
-									{formData.password.length < 4
-										? 'Password must be at least 4 characters'
-										: 'Passwords do not match'}
-								</span>
-							)}
-						</div>
+					{step === 1
+						? (
+							<form className="space-y-6" onSubmit={handleCredentialsSubmit}>
+								<div className="space-y-2">
+									<label htmlFor="email" className="block text-xs font-mono uppercase tracking-widest text-muted">
+										Email
+									</label>
+									<input
+										type="email"
+										id="email"
+										name="email"
+										value={formData.email}
+										onChange={handleInputChange}
+										autoComplete="email"
+										className="block w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
+										required />
+								</div>
+								<div className="space-y-2">
+									<div className="flex items-center justify-between">
+										<label htmlFor="password" className="block text-xs font-mono uppercase tracking-widest text-muted">
+											Password (min 4 chars)
+										</label>
+										<button
+											type="button"
+											onClick={() => { setShowPasswords(!showPasswords) }}
+											className="cursor-pointer text-muted hover:text-foreground transition-colors"
+											aria-label="Toggle password visibility"
+										>
+											{showPasswords ? <VisibilityOffIcon /> : <VisibilityIcon />}
+										</button>
+									</div>
+									<PasswordInput
+										name="password"
+										value={formData.password}
+										placeholder="Password"
+										onChange={handleInputChange}
+										inputType={showPasswords ? 'text' : 'password'}
+										borderColor={
+											passwordsMatch === false
+												? 'border-accent'
+												: passwordsMatch === true ? 'border-accent' : ''
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<label htmlFor="confirmPassword" className="block text-xs font-mono uppercase tracking-widest text-muted">
+										Confirm Password
+									</label>
+									<PasswordInput
+										name="confirmPassword"
+										value={formData.confirmPassword}
+										placeholder="Confirm password"
+										onChange={handleInputChange}
+										inputType={showPasswords ? 'text' : 'password'}
+										borderColor={
+											passwordsMatch === false
+												? 'border-accent'
+												: passwordsMatch === true ? 'border-accent' : ''
+										}
+									/>
+									{passwordsMatch === false && (
+										<span className="text-sm text-accent">
+											{formData.password.length < 4
+												? 'Password must be at least 4 characters'
+												: 'Passwords do not match'}
+										</span>
+									)}
+								</div>
 
-						<button
-							type="submit"
-							disabled={!isFormValid || isSubmitting}
-							className={`w-full px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
-									${(!isFormValid || isSubmitting) ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90 cursor-pointer'}`}
-						>
-							{isSubmitting ? 'Creating account...' : 'Sign up'}
-						</button>
-					</form>
+								<button
+									type="submit"
+									disabled={!isCredentialsValid}
+									className={`w-full px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
+											${!isCredentialsValid ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90 cursor-pointer'}`}
+								>
+									Continue
+								</button>
+							</form>
+						)
+						: (
+							<form className="space-y-6" onSubmit={handleUsernameSubmit}>
+								<div className="space-y-2">
+									<label htmlFor="username" className="block text-xs font-mono uppercase tracking-widest text-muted">
+										Username (optional)
+									</label>
+									<input
+										type="text"
+										id="username"
+										name="username"
+										value={formData.username}
+										onChange={handleInputChange}
+										placeholder="Pick a display name"
+										autoComplete="off"
+										maxLength={50}
+										className="block w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm" />
+									<p className="text-xs text-muted">Leave empty to skip — you can set it later from your account page.</p>
+								</div>
+
+								<div className="flex gap-2">
+									<button
+										type="button"
+										onClick={() => { setStep(1) }}
+										className="cursor-pointer flex-1 px-4 py-2 border border-border bg-surface text-foreground font-mono text-sm uppercase tracking-widest transition-colors hover:bg-card hover:border-accent/60"
+									>
+										Back
+									</button>
+									<button
+										type="submit"
+										disabled={isSubmitting}
+										className={`cursor-pointer flex-1 px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
+												${isSubmitting ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90'}`}
+									>
+										{isSubmitting ? 'Signing Up...' : 'Sign up'}
+									</button>
+								</div>
+							</form>
+						)}
 
 					{formError.length > 0 && (
 						<div className="border-t border-border pt-4 mt-6">
