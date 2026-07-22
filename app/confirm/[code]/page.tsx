@@ -2,7 +2,6 @@
 
 import { AxiosError } from 'axios'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import React, { type ReactElement, useEffect, useRef, useState } from 'react'
 
 import api from '@/app/lib/api'
