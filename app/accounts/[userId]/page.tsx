@@ -222,8 +222,6 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 										<div className="font-mono text-muted uppercase tracking-widest text-xs self-center">Email</div>
 										<div className="text-foreground">{userData.email}</div>
 
-										<div className="font-mono text-muted uppercase tracking-widest text-xs self-center">Confirmed</div>
-										<div className="text-foreground">{userData.confirmed === true ? 'Yes' : 'No'}</div>
 									</>
 								)}
 
