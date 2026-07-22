@@ -13,4 +13,5 @@ export type SideProject = {
 	title: string;
 	summary: string;
 	Component: ComponentType;
+	category?: string;
 };

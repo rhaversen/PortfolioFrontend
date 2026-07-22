@@ -5,6 +5,7 @@ import { type ReactNode } from 'react'
 
 import ErrorProvider from '@/app/contexts/ErrorContext/ErrorProvider'
 import UserProvider from '@/app/contexts/UserProvider'
+import UnconfirmedBanner from '@/app/components/UnconfirmedBanner'
 
 export default function ClientProviders ({ children }: { children: ReactNode }) {
 	const [queryClient] = useState(() => new QueryClient())
@@ -13,6 +14,7 @@ export default function ClientProviders ({ children }: { children: ReactNode }) 
 		<QueryClientProvider client={queryClient}>
 			<ErrorProvider>
 				<UserProvider>
+					<UnconfirmedBanner />
 					{children}
 				</UserProvider>
 			</ErrorProvider>

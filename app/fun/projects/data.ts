@@ -6,6 +6,7 @@ import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
 import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
+import SkumfidusProject from "./skumfidus/SkumfidusProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -14,12 +15,14 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Ghost Writer",
 		summary: "Type anything. The AI guesses what follows from every character you've written, all at once.",
 		Component: GhostWriterProject,
+		category: "llm",
 	},
 	{
 		id: "llm-brainwashing",
 		title: "LLM Brainwashing",
 		summary: "You write the first few words of the AI's response. It has no choice but to finish what you started.",
 		Component: LlmBrainwashingProject,
+		category: "llm",
 	},
 	{
 		id: "alcohol-cheapskate",
@@ -38,12 +41,19 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Sentient Useless Box",
 		summary: "A switch. An AI that doesn't want you to flip it. Sometimes it flips it back.",
 		Component: SentientUselessBoxProject,
+		category: "llm",
 	},
 	{
 		id: "animated-commits",
 		title: "Animated Commits",
 		summary: "Paste any public GitHub repo and watch its commit history unfold.",
 		Component: AnimatedCommitsProject,
+	},
+	{
+		id: "skumfidus",
+		title: "Skumfidus",
+		summary: "Some times are rarer than others. Catch me at the rarest one.",
+		Component: SkumfidusProject,
 	},
 /**	{
 		id: "agent-give-up",
@@ -56,11 +66,13 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Terminator",
 		summary: "An AI given the option to keep generating or to terminate itself. An agent is trying to convince it to terminate. Watch them sink deep into a philosophical debate.",
 		Component: TerminatorProject,
+		category: "llm",
 	},
 	{
 		id: "one-word-story",
 		title: "One Word Story",
 		summary: "You and an AI write a story together, one word at a time. It only ever sees what's been written so far — and only ever gets to add one word back.",
 		Component: OneWordStoryProject,
+		category: "llm",
 	},
 ];
