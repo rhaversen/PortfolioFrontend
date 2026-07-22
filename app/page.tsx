@@ -8,7 +8,7 @@ export default function Home() {
 			<GameOfLifeBg />
 
 			<section className="w-full border-y border-border bg-card/80 relative">
-				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+				<div className="max-w-4xl mx-auto px-6 py-8 sm:py-10">
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted">Portfolio</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">
 						Rasmus Haversen

@@ -105,14 +105,8 @@ function SignupContent (): ReactElement {
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-5 sm:py-8">
-					<Link
-						href="/"
-						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90 decoration-transparent transition-colors duration-150 hover:decoration-current"
-					>
-						← Back To Portfolio
-					</Link>
-					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight mt-4">Create Account</h1>
+				<div className="max-w-4xl mx-auto px-6 py-4 sm:py-6">
+					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Create Account</h1>
 					<p className="text-sm text-muted mt-3 max-w-md leading-relaxed">
 						Much of this site can be used without an account, but some side-project apps require signing up to save your progress or access their features.
 					</p>

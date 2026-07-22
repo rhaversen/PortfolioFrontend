@@ -150,12 +150,12 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+				<div className="max-w-4xl mx-auto px-6 py-8 sm:py-10">
 					<Link
-						href="/"
+						href="/accounts"
 						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90"
 					>
-						← Back To Portfolio
+						← All Accounts
 					</Link>
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted mt-6">Account</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">
