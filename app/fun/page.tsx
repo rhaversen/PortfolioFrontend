@@ -68,7 +68,7 @@ export default function FunPage() {
 				</div>
 			</section>
 
-			<div className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur-sm">
+			<div className="sticky top-0 z-30 w-full border-b border-border bg-card/95 backdrop-blur-sm">
 				<div className="max-w-4xl mx-auto px-6 py-3">
 					<ul className="flex flex-wrap gap-2 sm:gap-2.5">{renderProjectLinks()}</ul>
 				</div>
