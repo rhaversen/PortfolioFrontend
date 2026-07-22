@@ -1,23 +1,13 @@
 import ProjectShowcase from "./components/ProjectShowcase";
 import GameOfLifeBg from "./components/GameOfLifeBg";
 import ObfuscatedEmail from "./components/ObfuscatedEmail";
-import AuthNav from "./components/AuthNav";
 
 export default function Home() {
 	return (
 		<div className="relative min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_p]:text-[0.94rem] [&_p]:leading-7 [&_p]:text-foreground/90 [&_h1]:tracking-[-0.01em] [&_h2]:tracking-[0.01em] [&_h4]:tracking-[0.01em] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<GameOfLifeBg />
 
-			<AuthNav />
-
 			<section className="w-full border-y border-border bg-card/80 relative">
-				<a
-					href="/fun"
-					className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6 inline-flex items-center gap-1.5 rounded-full border border-border/90 bg-background/90 px-3 py-1 text-[0.7rem] font-mono uppercase tracking-[0.14em] text-foreground shadow-sm transition-colors hover:border-accent hover:text-accent"
-				>
-					<span>Fun</span>
-					<span aria-hidden="true" className="text-xs">↗</span>
-				</a>
 				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted">Portfolio</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">
