@@ -3,7 +3,7 @@
 import { AxiosError } from 'axios'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import React, { type ReactElement, useEffect, useState } from 'react'
+import React, { type ReactElement, useEffect, useRef, useState } from 'react'
 
 import api from '@/app/lib/api'
 import { useUser } from '@/app/contexts/UserProvider'
@@ -13,8 +13,11 @@ export default function Page ({ params }: { params: Promise<{ code: string }> })
 	const { currentUser, refetchUser } = useUser()
 	const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 	const [message, setMessage] = useState('')
+	const hasConfirmed = useRef(false)
 
 	useEffect(() => {
+		if (hasConfirmed.current) return
+		hasConfirmed.current = true
 		void (async () => {
 			const { code } = await params
 			try {
@@ -59,7 +62,7 @@ export default function Page ({ params }: { params: Promise<{ code: string }> })
 									<button
 										type="button"
 										onClick={() => { router.push(`/account/${currentUser._id}`) }}
-										className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-accent text-white decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity"
+										className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-accent text-white decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity cursor-pointer"
 									>
 										Continue to account
 									</button>
@@ -68,7 +71,7 @@ export default function Page ({ params }: { params: Promise<{ code: string }> })
 									<button
 										type="button"
 										onClick={() => { router.push('/login') }}
-										className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-accent text-white decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity"
+										className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-accent text-white decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity cursor-pointer"
 									>
 										Go to login
 									</button>
@@ -81,7 +84,7 @@ export default function Page ({ params }: { params: Promise<{ code: string }> })
 							<button
 								type="button"
 								onClick={() => { router.push('/login') }}
-								className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-surface text-foreground decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity"
+								className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-surface text-foreground decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity cursor-pointer"
 							>
 								Back to login
 							</button>

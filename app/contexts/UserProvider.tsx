@@ -39,14 +39,16 @@ export default function UserProvider ({ children }: { readonly children: ReactNo
 		staleTime: 5 * 60 * 1000
 	})
 
+	const refetchUser = React.useCallback(async () => {
+		await refetch()
+	}, [refetch])
+
 	const value = React.useMemo(() => ({
 		currentUser: currentUser ?? null,
 		isLoading,
 		error: error as Error | null,
-		refetchUser: async () => {
-			await refetch()
-		}
-	}), [currentUser, isLoading, error, refetch])
+		refetchUser
+	}), [currentUser, isLoading, error, refetchUser])
 
 	return (
 		<UserContext.Provider value={value}>
