@@ -1,24 +1,14 @@
 import ProjectShowcase from "./components/ProjectShowcase";
 import GameOfLifeBg from "./components/GameOfLifeBg";
 import ObfuscatedEmail from "./components/ObfuscatedEmail";
-import AuthNav from "./components/AuthNav";
 
 export default function Home() {
 	return (
 		<div className="relative min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_p]:text-[0.94rem] [&_p]:leading-7 [&_p]:text-foreground/90 [&_h1]:tracking-[-0.01em] [&_h2]:tracking-[0.01em] [&_h4]:tracking-[0.01em] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<GameOfLifeBg />
 
-			<AuthNav />
-
 			<section className="w-full border-y border-border bg-card/80 relative">
-				<a
-					href="/fun"
-					className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6 inline-flex items-center gap-1.5 rounded-full border border-border/90 bg-background/90 px-3 py-1 text-[0.7rem] font-mono uppercase tracking-[0.14em] text-foreground shadow-sm transition-colors hover:border-accent hover:text-accent"
-				>
-					<span>Fun</span>
-					<span aria-hidden="true" className="text-xs">↗</span>
-				</a>
-				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+				<div className="max-w-4xl mx-auto px-6 py-8 sm:py-10">
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted">Portfolio</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">
 						Rasmus Haversen
@@ -86,85 +76,85 @@ export default function Home() {
 				</section>
 
 				<section>
-				<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Projects</h2>
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-0">
-					<ProjectShowcase
-						id="exsys"
-						title="Exsys"
-						description="Ordering system for a Danish cantina. Touchscreen kiosks, kitchen display, and card payment."
-						color="#3b82f6"
-						url="kantine.nyskivehus.dk"
-						github="https://github.com/rhaversen/ExsysBackend"
-						stack={["SumUp API", "Socket.io", "Redis", "Passport.js", "Sentry"]}
-					/>
+					<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Projects</h2>
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-0">
+						<ProjectShowcase
+							id="exsys"
+							title="Exsys"
+							description="Ordering system for a Danish cantina. Touchscreen kiosks, kitchen display, and card payment."
+							color="#3b82f6"
+							url="kantine.nyskivehus.dk"
+							github="https://github.com/rhaversen/ExsysBackend"
+							stack={["SumUp API", "Socket.io", "Redis", "Passport.js", "Sentry"]}
+						/>
 
-					<ProjectShowcase
-						id="gaslight"
-						title="Gaslight"
-						description="Competitive programming platform where submitted JavaScript strategies play automated tournaments against each other."
-						color="#f97316"
-						url="gaslight.fun"
-						github="https://github.com/rhaversen/GaslightBackend"
-						stack={["isolated-vm", "esbuild", "esprima", "Monaco Editor", "Three.js"]}
-					/>
+						<ProjectShowcase
+							id="gaslight"
+							title="Gaslight"
+							description="Competitive programming platform where submitted JavaScript strategies play automated tournaments against each other."
+							color="#f97316"
+							url="gaslight.fun"
+							github="https://github.com/rhaversen/GaslightBackend"
+							stack={["isolated-vm", "esbuild", "esprima", "Monaco Editor", "Three.js"]}
+						/>
 
-					<ProjectShowcase
-						id="seedgpt"
-						title="SeedGPT"
-						description="AI agent that modifies its own source code, opens PRs, waits for CI, and merges — changing itself each cycle."
-						color="#eab308"
-						github="https://github.com/rhaversen/SeedGPT"
-						stack={["Anthropic Claude", "Multi-Agent Pipeline", "Octokit", "ArgoCD", "simple-git"]}
-					/>
+						<ProjectShowcase
+							id="seedgpt"
+							title="SeedGPT"
+							description="AI agent that modifies its own source code, opens PRs, waits for CI, and merges — changing itself each cycle."
+							color="#eab308"
+							github="https://github.com/rhaversen/SeedGPT"
+							stack={["Anthropic Claude", "Multi-Agent Pipeline", "Octokit", "ArgoCD", "simple-git"]}
+						/>
 
-					<ProjectShowcase
-						id="seedwatch"
-						title="SeedWatch"
-						description="Observability dashboard for SeedGPT. Inspect every LLM call with token counts, costs, and cache statistics."
-						color="#84cc16"
-						url="seedwatch.net"
-						github="https://github.com/rhaversen/seedwatch"
-						stack={["Prompt Cost Breakdown", "Cache Hit Tracking", "Per-Phase Inspection", "MongoDB"]}
-					/>
+						<ProjectShowcase
+							id="seedwatch"
+							title="SeedWatch"
+							description="Observability dashboard for SeedGPT. Inspect every LLM call with token counts, costs, and cache statistics."
+							color="#84cc16"
+							url="seedwatch.net"
+							github="https://github.com/rhaversen/seedwatch"
+							stack={["Prompt Cost Breakdown", "Cache Hit Tracking", "Per-Phase Inspection", "MongoDB"]}
+						/>
 
-					<ProjectShowcase
-						id="life-tracker"
-						title="Life Tracker"
-						description="Event tracking service. Log events with a single HTTP request from any device, see patterns on a dashboard."
-						color="#22c55e"
-						url="life-stats.net"
-						github="https://github.com/rhaversen/LifeTrackerBackend"
-						stack={["Chart.js", "Passport.js", "Nodemailer", "Sentry"]}
-					/>
+						<ProjectShowcase
+							id="life-tracker"
+							title="Life Tracker"
+							description="Event tracking service. Log events with a single HTTP request from any device, see patterns on a dashboard."
+							color="#22c55e"
+							url="life-stats.net"
+							github="https://github.com/rhaversen/LifeTrackerBackend"
+							stack={["Chart.js", "Passport.js", "Nodemailer", "Sentry"]}
+						/>
 
-					<ProjectShowcase
-						id="raindate"
-						title="RainDate"
-						description="Group scheduling app. Invite people, mark availability, and find the best time in real-time."
-						color="#a855f7"
-						url="raindate.net"
-						github="https://github.com/rhaversen/GroupSchedulerBackend"
-						stack={["Socket.io", "Redis", "Passport.js", "Nodemailer"]}
-					/>
+						<ProjectShowcase
+							id="raindate"
+							title="RainDate"
+							description="Group scheduling app. Invite people, mark availability, and find the best time in real-time."
+							color="#a855f7"
+							url="raindate.net"
+							github="https://github.com/rhaversen/GroupSchedulerBackend"
+							stack={["Socket.io", "Redis", "Passport.js", "Nodemailer"]}
+						/>
 
-					<ProjectShowcase
-						id="gol"
-						title="GOL"
-						description="C++ tool that generates and classifies Conway's Game of Life patterns as still lifes, oscillators, or spaceships."
-						color="#06b6d4"
-						github="https://github.com/rhaversen/GOL"
-						stack={["C++", "Floyd's Cycle Detection", "Bit-Packed Grid", "Canonical Hashing", "Multithreading"]}
-					/>
+						<ProjectShowcase
+							id="gol"
+							title="GOL"
+							description="C++ tool that generates and classifies Conway's Game of Life patterns as still lifes, oscillators, or spaceships."
+							color="#06b6d4"
+							github="https://github.com/rhaversen/GOL"
+							stack={["C++", "Floyd's Cycle Detection", "Bit-Packed Grid", "Canonical Hashing", "Multithreading"]}
+						/>
 
-					<ProjectShowcase
-						id="diecup"
-						title="Diecup-2"
-						description="Genetic algorithm that evolves strategies for a Danish dice game across a population of 1000 variations."
-						color="#ec4899"
-						github="https://github.com/rhaversen/Diecup-2"
-						stack={["Java", "Common Random Numbers", "Multi-Objective Fitness", "Adaptive Mutation", "Statistical Testing"]}
-					/>
-				</div>
+						<ProjectShowcase
+							id="diecup"
+							title="Diecup-2"
+							description="Genetic algorithm that evolves strategies for a Danish dice game across a population of 1000 variations."
+							color="#ec4899"
+							github="https://github.com/rhaversen/Diecup-2"
+							stack={["Java", "Common Random Numbers", "Multi-Objective Fitness", "Adaptive Mutation", "Statistical Testing"]}
+						/>
+					</div>
 				</section>
 
 			</main>

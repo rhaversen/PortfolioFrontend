@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 import api from '@/app/lib/api'
@@ -9,12 +10,12 @@ export const useLogout = (): { logout: () => void } => {
 	const { addError } = useError()
 	const { refetchUser } = useUser()
 
-	const logout = (): void => {
+	const logout = useCallback((): void => {
 		api.post('/v1/auth/logout-local', {})
 			.then(() => refetchUser())
 			.then(() => router.push('/'))
 			.catch(addError)
-	}
+	}, [router, refetchUser, addError])
 
 	return { logout }
 }
