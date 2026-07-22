@@ -55,13 +55,15 @@ export default function Page (): ReactElement {
 		try {
 			await api.post('/v1/auth/request-confirmation', { email: emailToUse })
 			setResendStatus('success')
-			setResendMessage('If that email exists and is unconfirmed, a confirmation email has been sent.')
+			setResendMessage(currentUser !== null
+				? 'A confirmation email has been sent.'
+				: 'If that email exists and is unconfirmed, a confirmation email has been sent.')
 		} catch (error) {
 			const axiosError = error as AxiosError<{ error: string }>
 			setResendStatus('error')
 			setResendMessage(axiosError.response?.data?.error ?? 'Unable to send confirmation email. Please try again later.')
 		}
-	}, [currentUser?.email, resendEmail])
+	}, [currentUser, resendEmail])
 
 	const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
 		e.preventDefault()
