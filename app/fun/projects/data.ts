@@ -6,6 +6,7 @@ import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
 import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
+import SkumfidusProject from "./skumfidus/SkumfidusProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -47,6 +48,12 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Animated Commits",
 		summary: "Paste any public GitHub repo and watch its commit history unfold.",
 		Component: AnimatedCommitsProject,
+	},
+	{
+		id: "skumfidus",
+		title: "Skumfidus",
+		summary: "Some times are rarer than others. Catch me at the rarest one.",
+		Component: SkumfidusProject,
 	},
 /**	{
 		id: "agent-give-up",
