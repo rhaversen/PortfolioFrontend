@@ -21,7 +21,7 @@ export default function UnconfirmedBanner (): ReactElement {
 	const [now, setNow] = useState(() => Date.now())
 
 	useEffect(() => {
-		if (currentUser === null || currentUser.confirmed !== false || currentUser.expirationDate === null) {
+		if (currentUser === null || currentUser.confirmed !== false || !currentUser.expirationDate) {
 			return
 		}
 		const interval = setInterval(() => { setNow(Date.now()) }, 1000)
@@ -32,7 +32,7 @@ export default function UnconfirmedBanner (): ReactElement {
 		return <></>
 	}
 
-	const expiry = currentUser.expirationDate !== null
+	const expiry = currentUser.expirationDate
 		? new Date(currentUser.expirationDate).getTime() - now
 		: null
 
