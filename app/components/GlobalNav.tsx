@@ -28,7 +28,7 @@ export default function GlobalNav(): ReactElement {
 			{currentUser !== null
 				? (
 					<>
-						<Link href={`/account/${currentUser._id}`} className={navLinkClass}>
+						<Link href={`/accounts/${currentUser._id}`} className={navLinkClass}>
 							<span>Account</span>
 						</Link>
 						<button type="button" onClick={logout} className={navLinkClass}>

@@ -37,7 +37,7 @@ function SignupContent (): ReactElement {
 				confirmPassword: userData.confirmPassword
 			})
 			await refetchUser()
-			router.push(`/account/${response.data.user._id}`)
+			router.push(`/accounts/${response.data.user._id}`)
 		} catch (error) {
 			const axiosError = error as AxiosError
 			if (axiosError.response?.status === 401) {

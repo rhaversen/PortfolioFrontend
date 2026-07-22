@@ -173,7 +173,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 							<div className="grid grid-cols-1 sm:grid-cols-[120px,1fr] gap-y-3 text-sm">
 								{isOwnProfile && (
 									<>
-										<div className="font-mono text-muted uppercase tracking-widest text-xs self-center">Username</div>
+										<div className="font-mono text-muted uppercase tracking-widest text-xs self-center">Display Name</div>
 										<div className="flex items-center gap-3">
 											{isEditingUsername
 												? (
@@ -183,7 +183,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 															name="username"
 															value={formData.username}
 															onChange={handleInputChange}
-															placeholder={userData.username}
+															placeholder={userData.username ?? 'Enter a username'}
 															className="w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
 														/>
 														<div className="flex gap-2 sm:shrink-0">
@@ -207,7 +207,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 												)
 												: (
 													<div className="flex items-center gap-3">
-														<span className="text-foreground">{userData.username}</span>
+														<span className="text-foreground">{(userData.username === '') ? 'No display name' : userData.username}</span>
 														<button
 															onClick={() => { setIsEditingUsername(true) }}
 															className="cursor-pointer px-2 py-0.5 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none"

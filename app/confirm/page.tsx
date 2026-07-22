@@ -103,7 +103,7 @@ export default function Page (): ReactElement {
 							? (
 								<button
 									type="button"
-									onClick={() => { router.push(`/account/${currentUser._id}`) }}
+									onClick={() => { router.push(`/accounts/${currentUser._id}`) }}
 									className="w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-accent text-white decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity cursor-pointer"
 								>
 									Continue to account
