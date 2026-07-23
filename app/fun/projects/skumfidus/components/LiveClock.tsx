@@ -18,7 +18,7 @@ export function LiveClock({
 				<span className="font-mono text-[0.65rem] uppercase tracking-widest text-muted">Live</span>
 			</div>
 			<div className="mt-2 flex items-baseline justify-between gap-4">
-				<div className="flex-1 flex items-baseline gap-1.5">
+				<div className="flex-1 min-w-0 flex items-baseline gap-1.5">
 					<span className="font-mono text-4xl sm:text-5xl tabular-nums tracking-tight">
 						{formatHM(now)}
 					</span>
@@ -26,7 +26,7 @@ export function LiveClock({
 						:{formatSeconds(now)}
 					</span>
 				</div>
-				<span className={`flex-1 text-right font-mono text-3xl sm:text-4xl tracking-tight ${tier.tone}`}>
+				<span className={`flex-1 min-w-0 text-right font-mono text-3xl sm:text-4xl tracking-tight ${tier.tone}`}>
 					{tier.label}
 				</span>
 			</div>

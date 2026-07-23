@@ -13,7 +13,7 @@ export function UserImbalance({
 	if (top.length === 0) return null;
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-2 overflow-x-auto">
 			<div
 				className="grid w-fit mx-auto gap-x-6 gap-y-0.5 font-mono text-[0.65rem] tabular-nums"
 				style={{ gridTemplateColumns: "max-content max-content max-content max-content max-content" }}

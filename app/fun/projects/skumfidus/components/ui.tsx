@@ -12,9 +12,9 @@ export function Section({ title, children, subtitle }: { title: string; children
 
 export function Stat({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="px-3 py-2">
+		<div className="px-3 py-2 min-w-0">
 			<div className="font-mono text-[0.6rem] uppercase tracking-widest text-muted">{label}</div>
-			<div className="mt-1 font-mono text-sm tabular-nums">{value}</div>
+			<div className="mt-1 font-mono text-sm tabular-nums wrap-break-word">{value}</div>
 		</div>
 	);
 }

@@ -12,8 +12,8 @@ export function ChartFrame({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="border border-border bg-background/40 p-4">
-			<svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={ariaLabel}>
+		<div className="border border-border bg-background/40 p-4 overflow-x-auto">
+			<svg viewBox={`0 0 ${W} ${H}`} className="h-auto block" style={{ width: "100%", minWidth: W }} role="img" aria-label={ariaLabel}>
 				{children}
 			</svg>
 		</div>
@@ -22,9 +22,9 @@ export function ChartFrame({
 
 export function Legend({ users }: { users: string[] }) {
 	return (
-		<div className="mt-3 flex items-center gap-4">
+		<div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
 			{users.map((u) => (
-				<span key={u} className="flex items-center gap-1.5 font-mono text-[0.6rem] text-muted">
+				<span key={u} className="flex items-center gap-1.5 whitespace-nowrap font-mono text-[0.6rem] text-muted">
 					<span className="inline-block h-2 w-4" style={{ background: strokeFor(u) }} />
 					{firstName(u)}
 				</span>

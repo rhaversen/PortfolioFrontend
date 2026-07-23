@@ -16,7 +16,7 @@ export function UnderutilizedTimes({
 	const maxCount = Math.max(...top.map((t) => t.count), 1);
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-2 overflow-x-auto">
 			<div
 				className="grid w-fit mx-auto gap-x-6 gap-y-0.5 font-mono text-[0.65rem] tabular-nums"
 			style={{ gridTemplateColumns: "max-content max-content max-content max-content max-content max-content max-content" }}

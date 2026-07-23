@@ -76,22 +76,33 @@ export function OneMinuteLatePanel({ items, users }: { items: Item[]; users: str
 				<Legend users={users} />
 			</div>
 
-			<div className="flex w-fit mx-auto gap-x-12 font-mono text-[0.65rem] tabular-nums">
-				{[items.slice(0, Math.ceil(items.length / 2)), items.slice(Math.ceil(items.length / 2))].map((half, hi) => (
-					<div
-						key={hi}
-						className="grid gap-x-6 gap-y-0.5"
-						style={{ gridTemplateColumns: "max-content max-content max-content max-content" }}
-					>
+			<div className="font-mono text-[0.65rem] tabular-nums">
+				{/* Mobile: single table */}
+				<div className="sm:hidden w-fit mx-auto overflow-x-auto">
+					<div className="grid gap-x-6 gap-y-0.5" style={{ gridTemplateColumns: "max-content max-content max-content max-content" }}>
 						<span className="text-muted">date</span>
 						<span className="text-muted">who</span>
 						<span className="text-muted">miss</span>
 						<span className="text-muted">prev</span>
-						{half.map((it, i) => (
+						{items.map((it, i) => (
 							<Row key={i} it={it} />
 						))}
 					</div>
-				))}
+				</div>
+				{/* Desktop: two columns with gap */}
+				<div className="hidden sm:flex w-fit mx-auto gap-x-12 overflow-x-auto">
+					{[items.slice(0, Math.ceil(items.length / 2)), items.slice(Math.ceil(items.length / 2))].map((half, hi) => (
+						<div key={hi} className="grid gap-x-6 gap-y-0.5" style={{ gridTemplateColumns: "max-content max-content max-content max-content" }}>
+							<span className="text-muted">date</span>
+							<span className="text-muted">who</span>
+							<span className="text-muted">miss</span>
+							<span className="text-muted">prev</span>
+							{half.map((it, i) => (
+								<Row key={i} it={it} />
+							))}
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	);
