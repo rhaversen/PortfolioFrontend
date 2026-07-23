@@ -8,6 +8,7 @@ import {
 	scoreTier,
 	type TimeAnalysis,
 } from "./patterns";
+import SkumfidusScoreboard from "./SkumfidusScoreboard";
 
 const NOW_UPDATE_MS = 1000;
 
@@ -310,6 +311,9 @@ export default function SkumfidusProject() {
 					between occurrences. Lower count = rarer.
 				</p>
 			</div>
+
+			{/* Historical skumfidus analysis */}
+			<SkumfidusScoreboard />
 		</div>
 	);
 }
