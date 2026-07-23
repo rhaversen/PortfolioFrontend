@@ -13,7 +13,7 @@ export const SIDE_PROJECTS: SideProject[] = [
 	{
 		id: "ghost-writer",
 		title: "Ghost Writer",
-		summary: "Type anything. The AI guesses what follows from every character you've written, all at once.",
+		summary: "Type anything. The AI guesses what follows from every word you've written, all at once.",
 		Component: GhostWriterProject,
 		category: "llm",
 	},
