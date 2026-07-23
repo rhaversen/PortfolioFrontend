@@ -1,6 +1,7 @@
 import { strokeFor, firstName, formatTimes } from "../useSkumfidusData";
 import type { ScoredEntry } from "../types";
-import { Legend, YearMarks } from "./ui";
+import { groupTimesByMonthUser } from "../utils";
+import { ChartFrame, Legend, GridLines, YearMarks, yearMarksFromMonths } from "./charts";
 
 export function MonthlyPaceChart({
 	data,
@@ -11,14 +12,7 @@ export function MonthlyPaceChart({
 	users: string[];
 	entries: ScoredEntry[];
 }) {
-	const timesByMonthUser = new Map<string, Map<string, string[]>>();
-	for (const e of entries) {
-		const m = timesByMonthUser.get(e.monthKey) ?? new Map();
-		const arr = m.get(e.user) ?? [];
-		arr.push(e.localTime);
-		m.set(e.user, arr);
-		timesByMonthUser.set(e.monthKey, m);
-	}
+	const timesByMonthUser = groupTimesByMonthUser(entries);
 
 	if (data.length === 0) {
 		return <p className="font-mono text-xs text-muted">No data.</p>;
@@ -38,42 +32,34 @@ export function MonthlyPaceChart({
 	const baselineBot = PAD + halfH + gap / 2;
 	const yCount = (v: number) => baselineTop - (v / maxCount) * (halfH - gap);
 	const yPct = (v: number) => baselineBot + (1 - v) * (halfH - gap);
+	const yearMarks = yearMarksFromMonths(data.map((d) => d.monthKey), PAD, W);
 
 	return (
-		<div className="border border-border bg-background/40 p-4">
-			<svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Monthly message counts and share percentages">
-				<YearMarks monthKeys={data.map((d) => d.monthKey)} PAD={PAD} W={W} H={H} />
+		<div className="space-y-3">
+			<ChartFrame W={W} H={H} ariaLabel="Monthly message counts and share percentages">
+				<YearMarks marks={yearMarks} topY={PAD} botY={H - PAD} />
 				<line x1={PAD} y1={baselineTop} x2={W - PAD} y2={baselineTop} stroke="var(--border)" strokeWidth={0.5} />
 				<line x1={PAD} y1={baselineBot} x2={W - PAD} y2={baselineBot} stroke="var(--border)" strokeWidth={0.5} />
 
 				<text x={PAD} y={PAD - 14} textAnchor="start" className="font-mono" fontSize={7} fill="var(--muted)">counts</text>
 				<text x={PAD} y={baselineBot + 8} textAnchor="start" className="font-mono" fontSize={7} fill="var(--muted)">share %</text>
-				{[0, 0.5, 1].map((f) => {
-					const gy = yCount(f * maxCount);
-					return (
-						<g key={`ct-${f}`}>
-							<line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="var(--border)" strokeWidth={0.25} strokeDasharray="2 2" />
-							{f > 0 && (
-								<text x={PAD - 4} y={gy + 3} textAnchor="end" className="font-mono" fontSize={8} fill="var(--muted)">
-									{Math.round(f * maxCount)}
-								</text>
-							)}
-						</g>
-					);
-				})}
-				{[0, 0.5, 1].map((f) => {
-					const gy = yPct(f);
-					return (
-						<g key={`pc-${f}`}>
-							{f > 0 && f < 1 && (
-								<line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="var(--border)" strokeWidth={0.25} strokeDasharray="2 2" />
-							)}
-							<text x={W - PAD + 4} y={gy + 3} textAnchor="start" className="font-mono" fontSize={8} fill="var(--muted)">
-								{Math.round(f * 100)}%
-							</text>
-						</g>
-					);
-				})}
+				<GridLines
+					fractions={[0, 0.5, 1]}
+					x1={PAD}
+					x2={W - PAD}
+					y={(f) => yCount(f * maxCount)}
+					dash
+					labelAt="left"
+					labelFormatter={(f) => (f > 0 ? String(Math.round(f * maxCount)) : "")}
+				/>
+				<GridLines
+					fractions={[0, 0.5, 1]}
+					x1={PAD}
+					x2={W - PAD}
+					y={(f) => yPct(f)}
+					labelAt="right"
+					labelFormatter={(f) => `${Math.round(f * 100)}%`}
+				/>
 
 				{data.map((d, i) => {
 					const bx = PAD + i * groupW + 1;
@@ -107,7 +93,7 @@ export function MonthlyPaceChart({
 						</g>
 					);
 				})}
-			</svg>
+			</ChartFrame>
 			<Legend users={users} />
 		</div>
 	);

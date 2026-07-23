@@ -43,7 +43,7 @@ export default function AccountsPage (): ReactElement {
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-8 sm:py-10">
+				<div className="max-w-4xl mx-auto px-6 pt-14 sm:pt-16 pb-8 sm:pb-10">
 					<p className="text-xs font-mono uppercase tracking-[0.24em] text-muted">Accounts</p>
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4">
 						Browse Accounts

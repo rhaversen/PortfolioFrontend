@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { analyzeTime } from "./patterns";
+import { analyzeTime, findNextRare, findUpcomingRare } from "./patterns";
 import { useSkumfidusData } from "./useSkumfidusData";
 import { Section } from "./components/ui";
 import { LiveClock } from "./components/LiveClock";
@@ -32,10 +32,6 @@ function useNow() {
 	return now;
 }
 
-function pad2(n: number) {
-	return String(n).padStart(2, "0");
-}
-
 export default function SkumfidusProject() {
 	const now = useNow();
 	const d = useSkumfidusData();
@@ -44,42 +40,9 @@ export default function SkumfidusProject() {
 		return analyzeTime(now.getHours(), now.getMinutes());
 	}, [now]);
 
-	const nextRare = useMemo(() => {
-		const start = now.getHours() * 60 + now.getMinutes();
-		let best: { time: string; pattern: string; inMin: number } | null = null;
-		for (let offset = 1; offset <= 1440; offset++) {
-			const totalMin = (start + offset) % 1440;
-			const h = Math.floor(totalMin / 60);
-			const m = totalMin % 60;
-			const a = analyzeTime(h, m);
-			if (a.score >= 100) {
-				best = { time: `${pad2(h)}:${pad2(m)}`, pattern: a.best?.symbol ?? "", inMin: offset };
-				break;
-			}
-		}
-		return best;
-	}, [now]);
-
-	const upcomingRare = useMemo(() => {
-		const start = now.getHours() * 60 + now.getMinutes();
-		const out: { time: string; patterns: string[]; counts: number[]; inMin: number; score: number }[] = [];
-		for (let offset = 1; offset <= 1440 && out.length < 5; offset++) {
-			const totalMin = (start + offset) % 1440;
-			const h = Math.floor(totalMin / 60);
-			const m = totalMin % 60;
-			const a = analyzeTime(h, m);
-			if (a.score > 50) {
-				out.push({
-					time: `${pad2(h)}:${pad2(m)}`,
-					patterns: a.matched.map((p) => p.symbol),
-					counts: a.matched.map((p) => p.count),
-					inMin: offset,
-					score: a.score,
-				});
-			}
-		}
-		return out;
-	}, [now]);
+	const startMin = now.getHours() * 60 + now.getMinutes();
+	const nextRare = useMemo(() => findNextRare(startMin), [startMin]);
+	const upcomingRare = useMemo(() => findUpcomingRare(startMin), [startMin]);
 
 	return (
 		<div className="space-y-6">
@@ -135,11 +98,11 @@ export default function SkumfidusProject() {
 			</Section>
 
 			<Section title="Underutilized skumfidus times" subtitle="High-value clock patterns (score > 50) with few or zero catches. Sorted by fewest messages first, then highest score. These are the best opportunities to grab rare points.">
-				<UnderutilizedTimes grid={d.heatmap} heatmaps={d.heatmaps} users={d.users} />
+				<UnderutilizedTimes items={d.underutilized} users={d.users} />
 			</Section>
 
 			<Section title="One-sided skumfidus times" subtitle="Times heavily dominated by one person (≥75% share, ≥3 total catches). Shows who owns a time slot and who's missing out.">
-				<UserImbalance heatmaps={d.heatmaps} users={d.users} />
+				<UserImbalance items={d.imbalance} users={d.users} />
 			</Section>
 
 			<Section title="One minute late" subtitle="A miss sent one minute after a skumfidus window — so close, yet one minute too late.">

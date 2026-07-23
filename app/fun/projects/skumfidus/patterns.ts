@@ -133,3 +133,63 @@ export function scoreTier(score: number): { label: string; tone: string } {
 	const t = TIER_DEFS.find((d) => score < d.max) ?? TIER_DEFS[TIER_DEFS.length - 1];
 	return { label: t.label, tone: t.tone };
 }
+
+export function tierIndex(score: number): number {
+	const i = TIER_DEFS.findIndex((t) => score < t.max);
+	return i < 0 ? TIER_DEFS.length - 1 : i;
+}
+
+export const ANALYSIS_GRID: TimeAnalysis[][] = Array.from({ length: 24 }, (_, h) =>
+	Array.from({ length: 60 }, (_, m) => analyzeTime(h, m)),
+);
+
+export const TIER_GRID: number[][] = Array.from({ length: 24 }, (_, h) =>
+	Array.from({ length: 60 }, (_, m) => tierIndex(ANALYSIS_GRID[h][m].score)),
+);
+
+export type NextRare = { time: string; pattern: string; inMin: number };
+
+export function findNextRare(startMin: number): NextRare | null {
+	for (let offset = 1; offset <= 1440; offset++) {
+		const totalMin = (startMin + offset) % 1440;
+		const h = Math.floor(totalMin / 60);
+		const m = totalMin % 60;
+		const a = ANALYSIS_GRID[h][m];
+		if (a.score >= 100) {
+			return { time: `${pad2(h)}:${pad2(m)}`, pattern: a.best?.symbol ?? "", inMin: offset };
+		}
+	}
+	return null;
+}
+
+export type UpcomingRare = {
+	time: string;
+	patterns: string[];
+	counts: number[];
+	inMin: number;
+	score: number;
+};
+
+export function findUpcomingRare(startMin: number, limit = 5, minScore = 50): UpcomingRare[] {
+	const out: UpcomingRare[] = [];
+	for (let offset = 1; offset <= 1440 && out.length < limit; offset++) {
+		const totalMin = (startMin + offset) % 1440;
+		const h = Math.floor(totalMin / 60);
+		const m = totalMin % 60;
+		const a = ANALYSIS_GRID[h][m];
+		if (a.score > minScore) {
+			out.push({
+				time: `${pad2(h)}:${pad2(m)}`,
+				patterns: a.matched.map((p) => p.symbol),
+				counts: a.matched.map((p) => p.count),
+				inMin: offset,
+				score: a.score,
+			});
+		}
+	}
+	return out;
+}
+
+function pad2(n: number): string {
+	return String(n).padStart(2, "0");
+}
