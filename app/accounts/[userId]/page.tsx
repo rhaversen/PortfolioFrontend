@@ -123,7 +123,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 	const pageShell = (content: ReactElement): ReactElement => (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-16 sm:py-20">
+				<div className="max-w-4xl mx-auto px-6 pt-20 sm:pt-24 pb-16 sm:pb-20">
 					<Link
 						href="/"
 						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90"
@@ -150,7 +150,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums] [&_a]:decoration-transparent [&_a]:transition-colors [&_a]:duration-150 [&_a:hover]:decoration-current">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-8 sm:py-10">
+				<div className="max-w-4xl mx-auto px-6 pt-14 sm:pt-16 pb-8 sm:pb-10">
 					<Link
 						href="/accounts"
 						className="text-[0.94rem] leading-7 font-mono uppercase tracking-[0.24em] text-foreground/90"

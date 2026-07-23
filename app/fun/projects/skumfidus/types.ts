@@ -109,4 +109,29 @@ export type SkumfidusData = {
 	maxHeat: number;
 	heatmaps: number[][][];
 	maxHeats: number[];
+	underutilized: UnderutilizedTime[];
+	imbalance: UserImbalanceTime[];
+};
+
+export type UnderutilizedTime = {
+	h: number;
+	m: number;
+	time: string;
+	score: number;
+	tier: number;
+	count: number;
+	patterns: string[];
+	userCounts: number[];
+};
+
+export type UserImbalanceTime = {
+	h: number;
+	m: number;
+	time: string;
+	total: number;
+	userCounts: number[];
+	dominantUser: string;
+	dominantCount: number;
+	otherCount: number;
+	ratio: number;
 };

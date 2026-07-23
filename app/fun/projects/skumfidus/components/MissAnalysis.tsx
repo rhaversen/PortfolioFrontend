@@ -1,6 +1,7 @@
 import type { MissRateStats, ScoredEntry } from "../types";
 import { colorFor, strokeFor, firstName, formatTimes } from "../useSkumfidusData";
-import { Legend, YearMarks } from "./ui";
+import { groupTimesByMonthUser } from "../utils";
+import { ChartFrame, Legend, GridLines, YearMarks, yearMarksFromMonths } from "./charts";
 
 export function MissAnalysis({
 	missRate,
@@ -13,15 +14,7 @@ export function MissAnalysis({
 	users: string[];
 	entries: ScoredEntry[];
 }) {
-	const missTimesByMonthUser = new Map<string, Map<string, string[]>>();
-	for (const e of entries) {
-		if (!e.isMiss) continue;
-		const m = missTimesByMonthUser.get(e.monthKey) ?? new Map();
-		const arr = m.get(e.user) ?? [];
-		arr.push(e.localTime);
-		m.set(e.user, arr);
-		missTimesByMonthUser.set(e.monthKey, m);
-	}
+	const missTimesByMonthUser = groupTimesByMonthUser(entries, (e) => e.isMiss);
 
 	const W = 600;
 	const H = 280;
@@ -32,23 +25,22 @@ export function MissAnalysis({
 	const barGap = 0;
 	const barW = Math.max(1, (groupW - groupGap) / users.length);
 	const y = (s: number) => H - PAD - (s / sMax) * (H - PAD * 2);
+	const yearMarks = yearMarksFromMonths(missByMonth.map((m) => m.monthKey), PAD, W);
 
 	return (
 		<div className="space-y-4">
-			<div className="border border-border bg-background/40 p-4">
-				<svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Miss count by month">
-					<YearMarks monthKeys={missByMonth.map((m) => m.monthKey)} PAD={PAD} W={W} H={H} />
-					{[0, 0.5, 1].map((f) => {
-						const gy = y(f * sMax);
-						return (
-							<g key={f}>
-								<line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="var(--border)" strokeWidth={0.5} />
-								<text x={PAD - 4} y={gy + 3} textAnchor="end" className="font-mono" fontSize={8} fill="var(--muted)">
-									{Math.round(f * sMax)}
-								</text>
-							</g>
-						);
-					})}
+			<div className="space-y-3">
+				<ChartFrame W={W} H={H} ariaLabel="Miss count by month">
+					<YearMarks marks={yearMarks} topY={PAD} botY={H - PAD} />
+					<GridLines
+						fractions={[0, 0.5, 1]}
+						x1={PAD}
+						x2={W - PAD}
+						y={(f) => y(f * sMax)}
+						dash={false}
+						labelAt="left"
+						labelFormatter={(f) => String(Math.round(f * sMax))}
+					/>
 					{missByMonth.map((m, i) => {
 						const gx = PAD + i * groupW + groupGap / 2;
 						return (
@@ -68,7 +60,7 @@ export function MissAnalysis({
 							</g>
 						);
 					})}
-				</svg>
+				</ChartFrame>
 				<Legend users={users} />
 			</div>
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -5,8 +5,8 @@ export function NextRare({
 }) {
 	if (!next) return null;
 	return (
-		<div className="flex items-center justify-between border border-border bg-background/40 px-4 py-3">
-			<div>
+		<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border border-border bg-background/40 px-4 py-3">
+			<div className="min-w-0">
 				<span className="font-mono text-[0.65rem] uppercase tracking-widest text-muted">
 					Next rare skumfidus
 				</span>
