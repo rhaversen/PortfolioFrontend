@@ -1,16 +1,7 @@
 import { pad2, firstName } from "../useSkumfidusData";
-import { TIER_DEFS, analyzeTime } from "../patterns";
-import type { TimeAnalysis } from "../patterns";
+import { TIER_DEFS, ANALYSIS_GRID, TIER_GRID } from "../patterns";
 
 const HEAT_HUES = ["rgba(255, 0, 0, ", "rgba(0, 255, 0, ", "rgba(0, 0, 255, "];
-
-const ANALYSIS_GRID: TimeAnalysis[][] = Array.from({ length: 24 }, (_, h) =>
-	Array.from({ length: 60 }, (_, m) => analyzeTime(h, m)),
-);
-
-const TIER_GRID = Array.from({ length: 24 }, (_, h) =>
-	Array.from({ length: 60 }, (_, m) => TIER_DEFS.findIndex((t) => ANALYSIS_GRID[h][m].score < t.max)),
-);
 
 function heatmapTooltip(h: number, mi: number, v: number, users?: string[], perUser?: number[][][]): string {
 	const a = ANALYSIS_GRID[h][mi];

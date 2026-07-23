@@ -1,18 +1,11 @@
 import { colorFor, firstName, formatTimes } from "../useSkumfidusData";
 import { TIER_DEFS } from "../patterns";
 import type { ScoredEntry, TierDistributionData } from "../types";
-import { Legend } from "./ui";
+import { groupTimesByTierUser } from "../utils";
+import { Legend } from "./charts";
 
 export function TierDistribution({ tierDist, users, entries }: { tierDist: TierDistributionData; users: string[]; entries: ScoredEntry[] }) {
-	const timesByTierUser = new Map<number, Map<string, string[]>>();
-	for (const e of entries) {
-		const ti = TIER_DEFS.findIndex((t) => e.score < t.max);
-		const m = timesByTierUser.get(ti) ?? new Map();
-		const arr = m.get(e.user) ?? [];
-		arr.push(e.localTime);
-		m.set(e.user, arr);
-		timesByTierUser.set(ti, m);
-	}
+	const timesByTierUser = groupTimesByTierUser(entries);
 
 	const maxCount = Math.max(...tierDist.combined.map((t) => t.count), 1);
 

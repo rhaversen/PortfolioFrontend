@@ -1,4 +1,5 @@
 import { scoreTier, type TimeAnalysis } from "../patterns";
+import { pad2 } from "../useSkumfidusData";
 
 export function LiveClock({
 	now,
@@ -8,7 +9,6 @@ export function LiveClock({
 	analysis: TimeAnalysis;
 }) {
 	const tier = scoreTier(analysis.score);
-	const pad2 = (n: number) => String(n).padStart(2, "0");
 	const formatHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 	const formatSeconds = (d: Date) => pad2(d.getSeconds());
 
