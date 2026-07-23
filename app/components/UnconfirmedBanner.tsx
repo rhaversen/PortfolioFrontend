@@ -37,7 +37,7 @@ export default function UnconfirmedBanner (): ReactElement {
 		: null
 
 	return (
-		<div className="w-full border-b border-accent/40 bg-accent/10">
+		<div className="relative z-10 w-full border-b border-accent/40 bg-background pt-10">
 			<div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
 				<p className="text-xs sm:text-sm text-accent">
 					Your email is not confirmed. Your account will be deleted
