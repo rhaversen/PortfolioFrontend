@@ -31,7 +31,7 @@ export default function Page (): ReactElement {
 	const isFormValid = formData.email.length > 0 && formData.password.length >= 4
 
 	const login = useCallback(async (credentials: { email: string, password: string, stayLoggedIn: boolean }) => {
-		await api.post<{ auth: boolean, user: UserType }>('/v1/auth/login-user-local', credentials)
+		const response = await api.post<{ auth: boolean, user: UserType }>('/v1/auth/login-user-local', credentials)
 		await refetchUser()
 
 		const canGoBack = () => {
@@ -46,7 +46,16 @@ export default function Page (): ReactElement {
 		}
 
 		if (canGoBack()) {
-			router.back()
+			try {
+				const referrerUrl = new URL(document.referrer)
+				if (referrerUrl.pathname === '/reset-password') {
+					router.push(`/accounts/${response.data.user._id}`)
+				} else {
+					router.back()
+				}
+			} catch {
+				router.back()
+			}
 		} else {
 			router.push('/')
 		}
@@ -149,7 +158,7 @@ export default function Page (): ReactElement {
 						<div className="border-t border-border pt-4 mt-6 space-y-3">
 							<p className="text-sm text-accent text-center">{formError}</p>
 							<div className="flex flex-col gap-2">
-							<Link href={`/forgot-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+						<Link href={`/reset-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
 								className="block w-full px-4 py-2 font-mono text-sm uppercase tracking-widest bg-surface text-foreground text-center decoration-transparent hover:opacity-90 hover:decoration-current transition-opacity">
 								Forgot password?
 							</Link>
@@ -169,7 +178,7 @@ export default function Page (): ReactElement {
 							Sign up
 						</Link>
 					</p>
-				<Link href={`/forgot-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+			<Link href={`/reset-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
 						className="text-sm text-muted decoration-transparent transition-colors duration-150 hover:decoration-current">
 						Forgot password?
 					</Link>

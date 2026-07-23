@@ -247,7 +247,7 @@ function SignupContent (): ReactElement {
 							Log in
 						</Link>
 					</p>
-				<Link href={`/forgot-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+			<Link href={`/reset-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
 						className="text-sm text-muted decoration-transparent transition-colors duration-150 hover:decoration-current">
 						Forgot password?
 					</Link>
