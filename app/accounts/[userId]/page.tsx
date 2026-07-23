@@ -4,10 +4,10 @@ import Link from 'next/link'
 import React, { type ReactElement, useEffect, useState, use } from 'react'
 
 import PasswordInput from '@/app/components/PasswordInput'
-import { VisibilityOffIcon, VisibilityIcon } from '@/app/components/icons'
+import { SpotifyIcon, VisibilityOffIcon, VisibilityIcon } from '@/app/components/icons'
 import { useUser } from '@/app/contexts/UserProvider'
 import api from '@/app/lib/api'
-import { type UserType } from '@/app/types/backendDataTypes'
+import { type SpotifyStatusType, type UserType } from '@/app/types/backendDataTypes'
 
 const formatDate = (date: string): string => {
 	const d = new Date(date)
@@ -32,6 +32,9 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 	const [success, setSuccess] = useState('')
 	const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null)
 	const [isRequestingDeletion, setIsRequestingDeletion] = useState(false)
+	const [spotifyStatus, setSpotifyStatus] = useState<SpotifyStatusType | null>(null)
+	const [isConnectingSpotify, setIsConnectingSpotify] = useState(false)
+	const [isDisconnectingSpotify, setIsDisconnectingSpotify] = useState(false)
 
 	useEffect(() => {
 		let cancelled = false
@@ -52,6 +55,71 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 		void fetchUser()
 		return () => { cancelled = true }
 	}, [params.userId])
+
+	useEffect(() => {
+		if (!isOwnProfile) return
+		let cancelled = false
+		const fetchSpotifyStatus = async (): Promise<void> => {
+			try {
+				const response = await api.get<SpotifyStatusType>('/v1/spotify/status')
+				if (!cancelled) {
+					setSpotifyStatus(response.data)
+				}
+			} catch (error) {
+				console.error('Error fetching Spotify status:', error)
+				if (!cancelled) { setSpotifyStatus(null) }
+			}
+		}
+		void fetchSpotifyStatus()
+		return () => { cancelled = true }
+	}, [isOwnProfile])
+
+	useEffect(() => {
+		const searchParams = new URLSearchParams(window.location.search)
+		const spotifyResult = searchParams.get('spotify')
+		if (spotifyResult === null) return
+		const processSpotifyResult = async (): Promise<void> => {
+			if (spotifyResult === 'connected') {
+				setSuccess('Spotify account connected successfully.')
+			} else if (spotifyResult === 'error') {
+				setError('Failed to connect Spotify account. Please try again.')
+			}
+			const url = new URL(window.location.href)
+			url.searchParams.delete('spotify')
+			window.history.replaceState(null, '', url.toString())
+		}
+		void processSpotifyResult()
+	}, [])
+
+	const handleConnectSpotify = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		setIsConnectingSpotify(true)
+		try {
+			const { data } = await api.get<{ url: string }>('/v1/spotify/auth')
+			window.location.href = data.url
+		} catch (error) {
+			setError('Failed to start Spotify connection. Please try again.')
+			console.error('Error starting Spotify connection:', error)
+			setIsConnectingSpotify(false)
+		}
+	}
+
+	const handleDisconnectSpotify = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		setIsDisconnectingSpotify(true)
+		try {
+			await api.post('/v1/spotify/disconnect')
+			setSpotifyStatus({ connected: false, connectedAt: null, scopes: null })
+			setSuccess('Spotify account disconnected.')
+		} catch (error) {
+			setError('Failed to disconnect Spotify account. Please try again.')
+			console.error('Error disconnecting Spotify:', error)
+		} finally {
+			setIsDisconnectingSpotify(false)
+		}
+	}
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
 		const newFormData = {
@@ -304,8 +372,53 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 			)}
 
 			{isOwnProfile && (
-				<section>
-					<h2 className="text-xs font-mono uppercase tracking-widest text-accent mb-6">Danger Zone</h2>
+				<section>				<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Spotify</h2>
+				<div className="border border-border bg-card/80 p-5">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+						<div className="flex items-center gap-3">
+							<SpotifyIcon />
+							<div>
+								<p className="text-sm text-foreground font-medium">Spotify Connection</p>
+								<p className="text-xs text-muted mt-1">
+									{spotifyStatus === null
+										? 'Checking connection...'
+										: spotifyStatus.connected
+											? `Connected${spotifyStatus.connectedAt !== null ? ` on ${formatDate(spotifyStatus.connectedAt)}` : ''}`
+											: 'Not connected. Connect to pull your listening stats.'}
+								</p>
+							</div>
+						</div>
+						{spotifyStatus !== null && (
+							spotifyStatus.connected
+								? (
+									<button
+										type="button"
+										onClick={() => { void handleDisconnectSpotify() }}
+										disabled={isDisconnectingSpotify}
+										className="cursor-pointer shrink-0 px-4 py-2 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isDisconnectingSpotify ? 'Disconnecting...' : 'Disconnect'}
+									</button>
+								)
+								: (
+									<button
+										type="button"
+										onClick={() => { void handleConnectSpotify() }}
+										disabled={isConnectingSpotify}
+										className="cursor-pointer shrink-0 px-4 py-2 border border-accent bg-accent text-white font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-accent/90 active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isConnectingSpotify ? 'Redirecting...' : 'Connect Spotify'}
+									</button>
+								)
+						)}
+					</div>
+				</div>
+			</section>
+		)}
+
+		{isOwnProfile && (
+			<section>
+				<h2 className="text-xs font-mono uppercase tracking-widest text-accent mb-6">Danger Zone</h2>
 					<div className="border border-accent/40 bg-card/80 p-5">
 						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 							<div>

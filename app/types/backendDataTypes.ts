@@ -13,3 +13,12 @@ export interface UserType {
 	createdAt: string
 	updatedAt: string
 }
+
+export interface SpotifyStatusType {
+	/** Whether the user has connected their Spotify account */
+	connected: boolean
+	/** When the account was connected (null if not connected) */
+	connectedAt: string | null
+	/** Space-separated scopes granted (null if not connected) */
+	scopes: string | null
+}
