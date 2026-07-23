@@ -463,7 +463,7 @@ export default function GolBenchPage() {
         <div className="relative text-foreground antialiased font-mono">
             <GameOfLifeBg />
 
-            <div className="relative z-10 max-w-3xl mx-auto px-6 py-12 space-y-8">
+            <div className="relative z-10 max-w-3xl mx-auto px-6 pt-16 pb-12 space-y-8">
                 {/* Header */}
                 <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-muted">Performance Lab</p>

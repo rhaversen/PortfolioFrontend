@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import data from "./skumfidus_dates.json";
-import { analyzeTime, scoreTier, PATTERN_STATS, TIER_DEFS } from "./patterns";
-import type { SkumfidusData, ScoredEntry, UserStats, MonthBucket, PatternDominance, NoveltyStats, MissRateStats, TierDistributionData, OneMinuteLate } from "./types";
+import { analyzeTime, scoreTier, tierIndex, PATTERN_STATS, TIER_DEFS, ANALYSIS_GRID, TIER_GRID } from "./patterns";
+import type { SkumfidusData, ScoredEntry, UserStats, MonthBucket, PatternDominance, NoveltyStats, MissRateStats, TierDistributionData, OneMinuteLate, UnderutilizedTime, UserImbalanceTime } from "./types";
 import type { RawEntry } from "./types";
 
 const COPENHAGEN_FMT = new Intl.DateTimeFormat("en-US", {
@@ -115,10 +115,6 @@ function computeMonthly(entries: ScoredEntry[]): { buckets: MonthBucket[]; users
 	}
 	const buckets = Array.from(map.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
 	return { buckets, users };
-}
-
-function tierIndex(score: number) {
-	return TIER_DEFS.findIndex((t) => score < t.max);
 }
 
 function computeTierDistribution(entries: ScoredEntry[], users: string[]): TierDistributionData {
@@ -305,6 +301,75 @@ function computeMissRateByMonth(entries: ScoredEntry[], users: string[]) {
 	}));
 }
 
+function computeUnderutilized(grid: number[][], heatmaps: number[][][], users: string[]): UnderutilizedTime[] {
+	const out: UnderutilizedTime[] = [];
+	for (let h = 0; h < 24; h++) {
+		for (let m = 0; m < 60; m++) {
+			const tier = TIER_GRID[h][m];
+			if (tier < 1) continue;
+			const count = grid[h][m];
+			const a = ANALYSIS_GRID[h][m];
+			if (a.matched.length === 0) continue;
+			out.push({
+				h,
+				m,
+				time: `${pad2(h)}:${pad2(m)}`,
+				score: a.score,
+				tier,
+				count,
+				patterns: a.matched.map((p) => p.symbol),
+				userCounts: users.map((_, ui) => heatmaps[ui]?.[h]?.[m] ?? 0),
+			});
+		}
+	}
+	out.sort((a, b) => {
+		const aRare = a.tier >= 2;
+		const bRare = b.tier >= 2;
+		if (aRare !== bRare) return aRare ? -1 : 1;
+		if (aRare) {
+			if (a.score !== b.score) return b.score - a.score;
+			return a.count - b.count;
+		}
+		return a.time.localeCompare(b.time);
+	});
+	return out.filter((t) => t.tier >= 2 || t.count === 0);
+}
+
+function computeImbalance(heatmaps: number[][][], users: string[]): UserImbalanceTime[] {
+	if (users.length < 2) return [];
+	const out: UserImbalanceTime[] = [];
+	for (let h = 0; h < 24; h++) {
+		for (let m = 0; m < 60; m++) {
+			const counts = users.map((_, ui) => heatmaps[ui]?.[h]?.[m] ?? 0);
+			const total = counts.reduce((s, c) => s + c, 0);
+			if (total < 3) continue;
+			const maxCount = Math.max(...counts);
+			const dominantIdx = counts.indexOf(maxCount);
+			const otherCount = total - maxCount;
+			if (otherCount >= maxCount) continue;
+			const ratio = total > 0 ? maxCount / total : 0;
+			if (ratio < 0.75) continue;
+			out.push({
+				h,
+				m,
+				time: `${pad2(h)}:${pad2(m)}`,
+				total,
+				userCounts: counts,
+				dominantUser: users[dominantIdx],
+				dominantCount: maxCount,
+				otherCount,
+				ratio,
+			});
+		}
+	}
+	out.sort((a, b) => {
+		if (a.ratio !== b.ratio) return b.ratio - a.ratio;
+		if (a.dominantCount !== b.dominantCount) return b.dominantCount - a.dominantCount;
+		return a.time.localeCompare(b.time);
+	});
+	return out;
+}
+
 const USER_COLORS: Record<string, { bg: string; stroke: string }> = {
 	"Rasmus Haversen": { bg: "bg-accent", stroke: "var(--accent)" },
 	"Sarah Cornelia Thrane": { bg: "bg-pink-500", stroke: "#ec4899" },
@@ -375,6 +440,8 @@ export function useSkumfidusData(): SkumfidusData {
 	const missRate = useMemo(() => computeMissRate(scored, users), [scored, users]);
 	const oneMinuteLate = useMemo(() => computeOneMinuteLate(scored), [scored]);
 	const missByMonth = useMemo(() => computeMissRateByMonth(scored, users), [scored, users]);
+	const underutilized = useMemo(() => computeUnderutilized(heatmap, heatmaps, users), [heatmap, heatmaps, users]);
+	const imbalance = useMemo(() => computeImbalance(heatmaps, users), [heatmaps, users]);
 
 	// Assign colors deterministically based on sorted user order
 	useMemo(() => {
@@ -407,6 +474,8 @@ export function useSkumfidusData(): SkumfidusData {
 		missRate,
 		oneMinuteLate,
 		missByMonth,
+		underutilized,
+		imbalance,
 		total,
 		totalScore,
 		missTotal,

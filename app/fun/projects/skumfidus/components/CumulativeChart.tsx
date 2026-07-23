@@ -1,5 +1,5 @@
 import { strokeFor, firstName } from "../useSkumfidusData";
-import { Legend } from "./ui";
+import { ChartFrame, Legend, GridLines, YearMarks, yearMarksFromTime } from "./charts";
 
 type Lead = {
 	user: string;
@@ -34,23 +34,7 @@ export function CumulativeChart({
 		return { user: u, d };
 	});
 
-	const yearMarks = (() => {
-		const startYear = new Date(tMin).getFullYear();
-		const endYear = new Date(tMax).getFullYear();
-		const years: { midX: number; boundaryX: number | null; label: string }[] = [];
-		for (let yr = startYear; yr <= endYear; yr++) {
-			const yearStart = new Date(yr, 0, 1).getTime();
-			const yearEnd = new Date(yr + 1, 0, 1).getTime();
-			const clampedStart = Math.max(yearStart, tMin);
-			const clampedEnd = Math.min(yearEnd, tMax);
-			years.push({
-				midX: x((clampedStart + clampedEnd) / 2),
-				boundaryX: yearStart > tMin ? x(yearStart) : null,
-				label: String(yr),
-			});
-		}
-		return years;
-	})();
+	const yearMarks = yearMarksFromTime(tMin, tMax, tRange, PAD, W - PAD * 2);
 
 	const leads = (() => {
 		const out: Lead[] = [];
@@ -81,29 +65,17 @@ export function CumulativeChart({
 	})();
 
 	return (
-		<div className="border border-border bg-background/40 p-4">
-			<svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Cumulative skumfidus score over time">
-				{[0, 0.25, 0.5, 0.75, 1].map((f) => {
-					const gy = y(f * sMax);
-					return (
-						<g key={f}>
-							<line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="var(--border)" strokeWidth={0.5} />
-							<text x={PAD - 4} y={gy + 3} textAnchor="end" className="font-mono" fontSize={8} fill="var(--muted)">
-								{Math.round(f * sMax)}
-							</text>
-						</g>
-					);
-				})}
-				{yearMarks.map((y) => (
-					<g key={y.label}>
-						{y.boundaryX !== null && (
-							<line x1={y.boundaryX} y1={PAD} x2={y.boundaryX} y2={H - PAD} stroke="var(--foreground)" strokeWidth={0.5} opacity={0.3} />
-						)}
-						<text x={y.midX} y={PAD - 4} textAnchor="middle" className="font-mono" fontSize={8} fill="var(--muted)">
-							{y.label}
-						</text>
-					</g>
-				))}
+		<div className="space-y-3">
+			<ChartFrame W={W} H={H} ariaLabel="Cumulative skumfidus score over time">
+				<GridLines
+					fractions={[0, 0.25, 0.5, 0.75, 1]}
+					x1={PAD}
+					x2={W - PAD}
+					y={(f) => y(f * sMax)}
+					labelAt="left"
+					labelFormatter={(f) => String(Math.round(f * sMax))}
+				/>
+				<YearMarks marks={yearMarks} topY={PAD} botY={H - PAD} />
 				{leads.map((lead, i) => {
 					const x1 = x(points[lead.startIdx].t);
 					const x2 = i < leads.length - 1 ? x(points[leads[i + 1].startIdx].t) : x(points[lead.endIdx].t);
@@ -126,9 +98,9 @@ export function CumulativeChart({
 				{paths.map((p) => (
 					<path key={p.user} d={p.d} fill="none" stroke={strokeFor(p.user)} strokeWidth={1.5} />
 				))}
-			</svg>
+			</ChartFrame>
 			<Legend users={users} />
-			<div className="mt-3">
+			<div>
 				<div className="font-mono text-[0.6rem] uppercase tracking-widest text-muted">Lead history</div>
 				<div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.6rem] text-muted">
 					{leads.map((lead, i) => {

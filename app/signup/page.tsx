@@ -20,6 +20,7 @@ function SignupContent (): ReactElement {
 	const { refetchUser } = useUser()
 	const [formError, setFormError] = useState('')
 	const [isSubmitting, setIsSubmitting] = useState(false)
+	const [isChecking, setIsChecking] = useState(false)
 	const [showPasswords, setShowPasswords] = useState(false)
 	const [step, setStep] = useState<1 | 2>(1)
 	const [formData, setFormData] = useState({
@@ -31,25 +32,24 @@ function SignupContent (): ReactElement {
 	const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null)
 	const isCredentialsValid = formData.email.length > 0 && formData.password.length >= 4 && (passwordsMatch ?? false)
 
-	const signup = useCallback(async (userData: { email: string, password: string, confirmPassword: string, username: string }) => {
-		try {
-			const response = await api.post<{ auth: boolean, user: UserType }>('/v1/users', {
-				email: userData.email,
-				password: userData.password,
-				confirmPassword: userData.confirmPassword,
-				username: userData.username
-			})
-			await refetchUser()
-			router.push(`/accounts/${response.data.user._id}`)
-		} catch (error) {
-			const axiosError = error as AxiosError
-			if (axiosError.response?.status === 401) {
-				setFormError('User already exists but the password is incorrect')
-				return
-			}
-			addError(error)
-		}
-	}, [addError, router, refetchUser])
+	const login = useCallback(async (credentials: { email: string, password: string }) => {
+		const response = await api.post<{ auth: boolean, user: UserType }>('/v1/auth/login-user-local', {
+			email: credentials.email,
+			password: credentials.password
+		})
+		await refetchUser()
+		router.push(`/accounts/${response.data.user._id}`)
+	}, [router, refetchUser])
+
+	const createAccount = useCallback(async () => {
+		await api.post<UserType>('/v1/users', {
+			email: formData.email,
+			password: formData.password,
+			confirmPassword: formData.confirmPassword,
+			username: formData.username
+		})
+		await login({ email: formData.email, password: formData.password })
+	}, [formData, login])
 
 	useEffect(() => {
 		api.get('/v1/auth/is-authenticated')
@@ -86,26 +86,47 @@ function SignupContent (): ReactElement {
 			return
 		}
 
-		setStep(2)
-	}, [passwordsMatch, formData.password.length])
+		setIsChecking(true)
+		login({ email: formData.email, password: formData.password })
+			.catch((error) => {
+				const axiosError = error as AxiosError
+				if (axiosError.response?.status === 401) {
+					setStep(2)
+				} else {
+					setFormError('Something went wrong. Please try again.')
+					addError(error)
+				}
+			})
+			.finally(() => {
+				setIsChecking(false)
+			})
+	}, [passwordsMatch, formData.email, formData.password, login, addError])
 
 	const handleUsernameSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault()
 		setFormError('')
 		setIsSubmitting(true)
 
-		signup(formData)
+		createAccount()
 			.catch((error) => {
-				setFormError('Failed to create account. Please try again.')
-				addError(error)
+				const axiosError = error as AxiosError
+				if (axiosError.response?.status === 409) {
+					setFormError('An account with that email already exists. Try logging in instead.')
+					setStep(1)
+				} else {
+					setFormError('Failed to create account. Please try again.')
+					addError(error)
+				}
+			})
+			.finally(() => {
 				setIsSubmitting(false)
 			})
-	}, [addError, signup, formData])
+	}, [createAccount, addError])
 
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-4 sm:py-6">
+				<div className="max-w-4xl mx-auto px-6 pt-12 sm:pt-14 pb-4 sm:pb-6">
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Create Account</h1>
 					<p className="text-sm text-muted mt-3 max-w-md leading-relaxed">
 						Much of this site can be used without an account, but some side-project apps require signing up to save your progress or access their features.
@@ -186,11 +207,11 @@ function SignupContent (): ReactElement {
 
 								<button
 									type="submit"
-									disabled={!isCredentialsValid}
-									className={`w-full px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
-											${!isCredentialsValid ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90 cursor-pointer'}`}
-								>
-									Continue
+								disabled={!isCredentialsValid || isChecking}
+								className={`w-full px-4 py-2 font-mono text-sm uppercase tracking-widest transition-colors
+										${(!isCredentialsValid || isChecking) ? 'bg-surface text-muted cursor-not-allowed' : 'bg-accent text-white hover:opacity-90 cursor-pointer'}`}
+							>
+								{isChecking ? 'Checking...' : 'Continue'}
 								</button>
 							</form>
 						)
@@ -216,7 +237,7 @@ function SignupContent (): ReactElement {
 								<div className="flex gap-2">
 									<button
 										type="button"
-										onClick={() => { setStep(1) }}
+								onClick={() => { setStep(1); setIsSubmitting(false) }}
 										className="cursor-pointer flex-1 px-4 py-2 border border-border bg-surface text-foreground font-mono text-sm uppercase tracking-widest transition-colors hover:bg-card hover:border-accent/60"
 									>
 										Back
@@ -247,7 +268,7 @@ function SignupContent (): ReactElement {
 							Log in
 						</Link>
 					</p>
-				<Link href={`/forgot-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
+			<Link href={`/reset-password${formData.email ? `?email=${encodeURIComponent(formData.email)}` : ''}`}
 						className="text-sm text-muted decoration-transparent transition-colors duration-150 hover:decoration-current">
 						Forgot password?
 					</Link>
@@ -262,7 +283,7 @@ export default function Page (): ReactElement {
 		<Suspense fallback={
 			<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 				<section className="w-full border-y border-border bg-card/80">
-					<div className="max-w-4xl mx-auto px-6 py-5 sm:py-8">
+				<div className="max-w-4xl mx-auto px-6 pt-12 sm:pt-14 pb-5 sm:pb-8">
 						<p className="text-sm text-muted font-mono">Loading...</p>
 					</div>
 				</section>
