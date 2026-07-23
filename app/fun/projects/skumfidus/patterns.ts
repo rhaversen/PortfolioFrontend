@@ -190,7 +190,5 @@ export function parseTime(input: string): Digits | null {
 export function scoreTier(score: number): { label: string; tone: string } {
 	if (score <= 50) return { label: "Not Skumfidus", tone: "text-muted" };
 	if (score < 100) return { label: "Mildly skumfidus", tone: "text-foreground/80" };
-	if (score < 200) return { label: "Notably Skumfidus", tone: "text-foreground" };
-	if (score < 500) return { label: "Rare Skumfidus!", tone: "text-accent" };
-	return { label: "SKUMFIDUS!", tone: "text-accent" };
+	return { label: "Rare Skumfidus!", tone: "text-accent" };
 }
