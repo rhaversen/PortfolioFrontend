@@ -128,6 +128,7 @@ export type PatternStat = {
 	description: string;
 	kind: PatternKind;
 	count: number;
+	score: number;
 	examples: string[];
 	rarity: number;
 	rank: number;
@@ -136,15 +137,17 @@ export type PatternStat = {
 export const PATTERN_STATS: PatternStat[] = (() => {
 	const stats = PATTERNS.map((p) => {
 		const matches = ALL_TIMES.filter((t) => p.match(t.digits));
+		const count = matches.length;
 		return {
 			id: p.id,
 			name: p.name,
 			symbol: p.symbol,
 			description: p.description,
 			kind: p.kind,
-			count: matches.length,
+			count,
+			score: count === 0 ? 0 : Math.round((1440 / count) * 10) / 10,
 			examples: matches.slice(0, 6).map((m) => m.time),
-			rarity: matches.length === 0 ? Infinity : 1440 / matches.length,
+			rarity: count === 0 ? Infinity : 1440 / count,
 		};
 	});
 	stats.sort((a, b) => {
