@@ -89,7 +89,7 @@ export default function Page (): ReactElement {
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full border-y border-border bg-card/80">
-				<div className="max-w-4xl mx-auto px-6 py-4 sm:py-6">
+				<div className="max-w-4xl mx-auto px-6 pt-12 sm:pt-14 pb-4 sm:pb-6">
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Log In</h1>
 				</div>
 			</section>

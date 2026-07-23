@@ -50,7 +50,7 @@ export default function FunPage() {
 	return (
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full bg-card/80">
-			<div className="max-w-4xl mx-auto px-6 py-4 sm:py-6">
+			<div className="max-w-4xl mx-auto px-6 pt-12 sm:pt-14 pb-4 sm:pb-6">
 					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Side Projects Fun</h1>
 					<p className="text-foreground/90 mt-5 max-w-3xl text-sm leading-relaxed">
 						Interactive side projects that sit outside the main portfolio work. Pick a project to open it here.
@@ -59,7 +59,7 @@ export default function FunPage() {
 			</section>
 
 			<div className="sticky top-0 z-30 w-full border-b border-border bg-card/95 backdrop-blur-sm">
-				<div className="max-w-4xl mx-auto px-6 py-3 space-y-2">
+				<div className="max-w-4xl mx-auto px-6 pt-10 pb-3 space-y-2">
 					<ul className="flex flex-wrap gap-2 sm:gap-2.5">
 						<li>
 							<button
