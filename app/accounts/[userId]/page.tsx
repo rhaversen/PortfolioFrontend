@@ -480,7 +480,7 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 			<section>
 				<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Last.fm</h2>
 				<div className="border border-border bg-card/80 p-5">
-					<div className="flex flex-col gap-3">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 						<div className="flex items-center gap-3">
 							<LastfmIcon />
 							<div>
@@ -494,39 +494,37 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 								</p>
 							</div>
 						</div>
-						{lastfmStatus !== null && !lastfmStatus.connected && (
-							<div className="flex flex-col sm:flex-row gap-2">
-								<input
-									type="text"
-									value={lastfmUsernameInput}
-									onChange={(e) => { setLastfmUsernameInput(e.target.value) }}
-									onKeyDown={(e) => { if (e.key === 'Enter') { void handleConnectLastfm() } }}
-									placeholder="Last.fm username"
-									className="w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
-								/>
-								<button
-									type="button"
-									onClick={() => { void handleConnectLastfm() }}
-									disabled={isConnectingLastfm || lastfmUsernameInput.trim() === ''}
-									className="cursor-pointer shrink-0 px-4 py-2 border border-accent bg-accent text-white font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-accent/90 active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									{isConnectingLastfm ? 'Connecting...' : 'Connect'}
-								</button>
-							</div>
-						)}
 						{lastfmStatus !== null && lastfmStatus.connected && (
-							<div className="flex flex-col sm:flex-row gap-2">
-								<button
-									type="button"
-									onClick={() => { void handleDisconnectLastfm() }}
-									disabled={isDisconnectingLastfm}
-									className="cursor-pointer shrink-0 px-4 py-2 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									{isDisconnectingLastfm ? 'Disconnecting...' : 'Disconnect'}
-								</button>
-							</div>
+							<button
+								type="button"
+								onClick={() => { void handleDisconnectLastfm() }}
+								disabled={isDisconnectingLastfm}
+								className="cursor-pointer shrink-0 px-4 py-2 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isDisconnectingLastfm ? 'Disconnecting...' : 'Disconnect'}
+							</button>
 						)}
 					</div>
+					{lastfmStatus !== null && !lastfmStatus.connected && (
+						<div className="flex flex-col sm:flex-row gap-2 mt-3">
+							<input
+								type="text"
+								value={lastfmUsernameInput}
+								onChange={(e) => { setLastfmUsernameInput(e.target.value) }}
+								onKeyDown={(e) => { if (e.key === 'Enter') { void handleConnectLastfm() } }}
+								placeholder="Last.fm username"
+								className="w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
+							/>
+							<button
+								type="button"
+								onClick={() => { void handleConnectLastfm() }}
+								disabled={isConnectingLastfm || lastfmUsernameInput.trim() === ''}
+								className="cursor-pointer shrink-0 px-4 py-2 border border-accent bg-accent text-white font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-accent/90 active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isConnectingLastfm ? 'Connecting...' : 'Connect'}
+							</button>
+						</div>
+					)}
 				</div>
 			</section>
 		)}
