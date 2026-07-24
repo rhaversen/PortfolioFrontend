@@ -22,3 +22,10 @@ export interface SpotifyStatusType {
 	/** Space-separated scopes granted (null if not connected) */
 	scopes: string | null
 }
+
+export interface LastfmStatusType {
+	/** Whether the user has connected their Last.fm account */
+	connected: boolean
+	/** The Last.fm username (null if not connected) */
+	lastfmUsername: string | null
+}
