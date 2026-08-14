@@ -4,10 +4,10 @@ import Link from 'next/link'
 import React, { type ReactElement, useEffect, useState, use } from 'react'
 
 import PasswordInput from '@/app/components/PasswordInput'
-import { VisibilityOffIcon, VisibilityIcon } from '@/app/components/icons'
+import { LastfmIcon, SpotifyIcon, VisibilityOffIcon, VisibilityIcon } from '@/app/components/icons'
 import { useUser } from '@/app/contexts/UserProvider'
 import api from '@/app/lib/api'
-import { type UserType } from '@/app/types/backendDataTypes'
+import { type LastfmStatusType, type SpotifyStatusType, type UserType } from '@/app/types/backendDataTypes'
 
 const formatDate = (date: string): string => {
 	const d = new Date(date)
@@ -32,6 +32,13 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 	const [success, setSuccess] = useState('')
 	const [passwordsMatch, setPasswordsMatch] = useState<boolean | null>(null)
 	const [isRequestingDeletion, setIsRequestingDeletion] = useState(false)
+	const [spotifyStatus, setSpotifyStatus] = useState<SpotifyStatusType | null>(null)
+	const [isConnectingSpotify, setIsConnectingSpotify] = useState(false)
+	const [isDisconnectingSpotify, setIsDisconnectingSpotify] = useState(false)
+	const [lastfmStatus, setLastfmStatus] = useState<LastfmStatusType | null>(null)
+	const [lastfmUsernameInput, setLastfmUsernameInput] = useState('')
+	const [isConnectingLastfm, setIsConnectingLastfm] = useState(false)
+	const [isDisconnectingLastfm, setIsDisconnectingLastfm] = useState(false)
 
 	useEffect(() => {
 		let cancelled = false
@@ -52,6 +59,127 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 		void fetchUser()
 		return () => { cancelled = true }
 	}, [params.userId])
+
+	useEffect(() => {
+		if (!isOwnProfile) return
+		let cancelled = false
+		const fetchSpotifyStatus = async (): Promise<void> => {
+			try {
+				const response = await api.get<SpotifyStatusType>('/v1/spotify/status')
+				if (!cancelled) {
+					setSpotifyStatus(response.data)
+				}
+			} catch (error) {
+				console.error('Error fetching Spotify status:', error)
+				if (!cancelled) { setSpotifyStatus(null) }
+			}
+		}
+		void fetchSpotifyStatus()
+		return () => { cancelled = true }
+	}, [isOwnProfile])
+
+	useEffect(() => {
+		if (!isOwnProfile) return
+		let cancelled = false
+		const fetchLastfmStatus = async (): Promise<void> => {
+			try {
+				const response = await api.get<LastfmStatusType>('/v1/lastfm/status')
+				if (!cancelled) {
+					setLastfmStatus(response.data)
+				}
+			} catch (error) {
+				console.error('Error fetching Last.fm status:', error)
+				if (!cancelled) { setLastfmStatus(null) }
+			}
+		}
+		void fetchLastfmStatus()
+		return () => { cancelled = true }
+	}, [isOwnProfile])
+
+	useEffect(() => {
+		const searchParams = new URLSearchParams(window.location.search)
+		const spotifyResult = searchParams.get('spotify')
+		if (spotifyResult === null) return
+		const processSpotifyResult = async (): Promise<void> => {
+			if (spotifyResult === 'connected') {
+				setSuccess('Spotify account connected successfully.')
+			} else if (spotifyResult === 'error') {
+				setError('Failed to connect Spotify account. Please try again.')
+			}
+			const url = new URL(window.location.href)
+			url.searchParams.delete('spotify')
+			window.history.replaceState(null, '', url.toString())
+		}
+		void processSpotifyResult()
+	}, [])
+
+	const handleConnectSpotify = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		setIsConnectingSpotify(true)
+		try {
+			const { data } = await api.get<{ url: string }>('/v1/spotify/auth')
+			window.location.href = data.url
+		} catch (error) {
+			setError('Failed to start Spotify connection. Please try again.')
+			console.error('Error starting Spotify connection:', error)
+			setIsConnectingSpotify(false)
+		}
+	}
+
+	const handleDisconnectSpotify = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		setIsDisconnectingSpotify(true)
+		try {
+			await api.post('/v1/spotify/disconnect')
+			setSpotifyStatus({ connected: false, connectedAt: null, scopes: null })
+			setSuccess('Spotify account disconnected.')
+		} catch (error) {
+			setError('Failed to disconnect Spotify account. Please try again.')
+			console.error('Error disconnecting Spotify:', error)
+		} finally {
+			setIsDisconnectingSpotify(false)
+		}
+	}
+
+	const handleConnectLastfm = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		const username = lastfmUsernameInput.trim()
+		if (username === '') {
+			setError('Enter your Last.fm username.')
+			return
+		}
+		setIsConnectingLastfm(true)
+		try {
+			const { data } = await api.post<{ connected: boolean, lastfmUsername: string, playcount: number }>('/v1/lastfm/connect', { lastfmUsername: username })
+			setLastfmStatus({ connected: true, lastfmUsername: data.lastfmUsername })
+			setLastfmUsernameInput('')
+			setSuccess(`Last.fm account connected (${data.playcount.toLocaleString()} scrobbles). Backfilling history in the background...`)
+		} catch (error) {
+			setError('Failed to connect Last.fm account. Check your username and try again.')
+			console.error('Error connecting Last.fm:', error)
+		} finally {
+			setIsConnectingLastfm(false)
+		}
+	}
+
+	const handleDisconnectLastfm = async (): Promise<void> => {
+		setError('')
+		setSuccess('')
+		setIsDisconnectingLastfm(true)
+		try {
+			await api.post('/v1/lastfm/disconnect')
+			setLastfmStatus({ connected: false, lastfmUsername: null })
+			setSuccess('Last.fm account disconnected.')
+		} catch (error) {
+			setError('Failed to disconnect Last.fm account. Please try again.')
+			console.error('Error disconnecting Last.fm:', error)
+		} finally {
+			setIsDisconnectingLastfm(false)
+		}
+	}
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
 		const newFormData = {
@@ -304,8 +432,106 @@ export default function Page(props: { params: Promise<{ userId: string }> }): Re
 			)}
 
 			{isOwnProfile && (
-				<section>
-					<h2 className="text-xs font-mono uppercase tracking-widest text-accent mb-6">Danger Zone</h2>
+				<section>				<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Spotify</h2>
+				<div className="border border-border bg-card/80 p-5">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+						<div className="flex items-center gap-3">
+							<SpotifyIcon />
+							<div>
+								<p className="text-sm text-foreground font-medium">Spotify Connection</p>
+								<p className="text-xs text-muted mt-1">
+									{spotifyStatus === null
+										? 'Checking connection...'
+										: spotifyStatus.connected
+											? `Connected${spotifyStatus.connectedAt !== null ? ` on ${formatDate(spotifyStatus.connectedAt)}` : ''}`
+											: 'Not connected. Connect to pull your listening stats.'}
+								</p>
+							</div>
+						</div>
+						{spotifyStatus !== null && (
+							spotifyStatus.connected
+								? (
+									<button
+										type="button"
+										onClick={() => { void handleDisconnectSpotify() }}
+										disabled={isDisconnectingSpotify}
+										className="cursor-pointer shrink-0 px-4 py-2 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isDisconnectingSpotify ? 'Disconnecting...' : 'Disconnect'}
+									</button>
+								)
+								: (
+									<button
+										type="button"
+										onClick={() => { void handleConnectSpotify() }}
+										disabled={isConnectingSpotify}
+										className="cursor-pointer shrink-0 px-4 py-2 border border-accent bg-accent text-white font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-accent/90 active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isConnectingSpotify ? 'Redirecting...' : 'Connect Spotify'}
+									</button>
+								)
+						)}
+					</div>
+				</div>
+			</section>
+		)}
+
+		{isOwnProfile && (
+			<section>
+				<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Last.fm</h2>
+				<div className="border border-border bg-card/80 p-5">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+						<div className="flex items-center gap-3">
+							<LastfmIcon />
+							<div>
+								<p className="text-sm text-foreground font-medium">Last.fm Connection</p>
+								<p className="text-xs text-muted mt-1">
+									{lastfmStatus === null
+										? 'Checking connection...'
+										: lastfmStatus.connected
+											? `Connected as ${lastfmStatus.lastfmUsername}`
+											: 'Not connected. Enter your Last.fm username to import your scrobble history.'}
+								</p>
+							</div>
+						</div>
+						{lastfmStatus !== null && lastfmStatus.connected && (
+							<button
+								type="button"
+								onClick={() => { void handleDisconnectLastfm() }}
+								disabled={isDisconnectingLastfm}
+								className="cursor-pointer shrink-0 px-4 py-2 border border-border bg-surface text-foreground font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-card hover:border-accent/60 hover:text-accent active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isDisconnectingLastfm ? 'Disconnecting...' : 'Disconnect'}
+							</button>
+						)}
+					</div>
+					{lastfmStatus !== null && !lastfmStatus.connected && (
+						<div className="flex flex-col sm:flex-row gap-2 mt-3">
+							<input
+								type="text"
+								value={lastfmUsernameInput}
+								onChange={(e) => { setLastfmUsernameInput(e.target.value) }}
+								onKeyDown={(e) => { if (e.key === 'Enter') { void handleConnectLastfm() } }}
+								placeholder="Last.fm username"
+								className="w-full px-3 py-2 text-foreground bg-card border border-border focus:ring-2 focus:ring-accent focus:border-accent outline-none sm:text-sm"
+							/>
+							<button
+								type="button"
+								onClick={() => { void handleConnectLastfm() }}
+								disabled={isConnectingLastfm || lastfmUsernameInput.trim() === ''}
+								className="cursor-pointer shrink-0 px-4 py-2 border border-accent bg-accent text-white font-mono text-xs uppercase tracking-widest shadow-sm transition-all duration-150 hover:bg-accent/90 active:translate-y-px active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isConnectingLastfm ? 'Connecting...' : 'Connect'}
+							</button>
+						</div>
+					)}
+				</div>
+			</section>
+		)}
+
+		{isOwnProfile && (
+			<section>
+				<h2 className="text-xs font-mono uppercase tracking-widest text-accent mb-6">Danger Zone</h2>
 					<div className="border border-accent/40 bg-card/80 p-5">
 						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 							<div>
