@@ -7,6 +7,7 @@ import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
 import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
 import SkumfidusProject from "./skumfidus/SkumfidusProject";
+import EclipseForecastProject from "./eclipse-forecast/EclipseForecastProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -74,5 +75,11 @@ export const SIDE_PROJECTS: SideProject[] = [
 		summary: "You and an AI write a story together, one word at a time. It only ever sees what's been written so far — and only ever gets to add one word back.",
 		Component: OneWordStoryProject,
 		category: "llm",
+	},
+	{
+		id: "eclipse-forecast",
+		title: "Eclipse Forecast",
+		summary: "A 3D globe showing exactly where the Moon's shadow will fall for every solar eclipse over the next decade — 1:1 with NASA's published paths, drawn straight from their Besselian elements.",
+		Component: EclipseForecastProject,
 	},
 ];
