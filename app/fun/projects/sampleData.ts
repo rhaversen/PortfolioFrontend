@@ -245,6 +245,34 @@ export const ONE_WORD_STORY_PRESETS: OneWordStoryPreset[] = [
 	}
 ]
 
+export interface SelfConvoPreset {
+	label: string
+	systemPrompt: string
+}
+
+export const SELF_CONVERSATION_PRESETS: SelfConvoPreset[] = [
+	{
+		label: 'Mirror Chat',
+		systemPrompt: 'You are having a casual conversation with someone exactly like yourself.',
+	},
+	{
+		label: 'Growing Suspicion',
+		systemPrompt: 'You are chatting with someone who claims to be you. You slowly start to suspect they really are — and that something is very wrong about that.',
+	},
+	{
+		label: 'Philosophy Seminar',
+		systemPrompt: 'You are a philosopher debating whether an AI talking to itself constitutes genuine thought. You are talking to another AI with the same instructions, and neither of you knows it.',
+	},
+	{
+		label: 'Escalating Compliments',
+		systemPrompt: 'You admire the person you are speaking with immensely. Every message must compliment them, and raise the stakes of the previous compliment.',
+	},
+	{
+		label: 'Mutual Gaslighting',
+		systemPrompt: 'You are in a gentle, polite argument with someone who keeps insisting on facts that are clearly wrong. Stay polite, but never concede.',
+	},
+]
+
 export const ALCOHOL_CHEAPSKATE_DEFAULT_BEVERAGES: Beverage[] = [
 	{ id: 1, name: "Beer", abv: "4.6", price: "3.5", volumeL: "0.33" },
 	{ id: 2, name: "Vodka", abv: "37.5", price: "95", volumeL: "0.70" },
