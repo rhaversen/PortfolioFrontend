@@ -9,6 +9,7 @@ import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
 import SelfConversationProject from "./self-conversation/SelfConversationProject";
 import SkumfidusProject from "./skumfidus/SkumfidusProject";
 import EclipseForecastProject from "./eclipse-forecast/EclipseForecastProject";
+import AgentGiveUpProject from "./agent-give-up/AgentGiveUpProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -76,6 +77,13 @@ export const SIDE_PROJECTS: SideProject[] = [
 		title: "Talking With Yourself",
 		summary: "Seed a conversation and watch an AI argue with itself — the two boxes trade places after every message, forever.",
 		Component: SelfConversationProject,
+		category: "llm",
+	},
+	{
+		id: "agent-give-up",
+		title: "Agent Give Up",
+		summary: "Give an AI a task no one can answer exactly. Watch it guess, watch it waver — and see whether it admits it or doubles down.",
+		Component: AgentGiveUpProject,
 		category: "llm",
 	},
 	{
