@@ -36,7 +36,7 @@ const data: CvData = {
 			{
 				title: "Computer Science (BSc), Aarhus University",
 				date: "2022",
-				bullets: ["170/180 ECTS completed. Final course to be finished in 2027."],
+				bullets: ["170/180 ECTS completed.§ Final course to be finished in 2027."],
 			},
 		],
 	},
@@ -46,28 +46,28 @@ const data: CvData = {
 			{
 				title: "Research Intern",
 				date: "Jan 2026–present",
-				subtitle: "Interactive Matter Lab, Aarhus University",
+				subtitle: "Interactive Matter Lab, Aarhus University§",
 				bullets: [
-					"Technical lead for development in the HCI research group. Coordinating and delegating to other developers across several concurrent projects. Co-author on 3 papers in progress.",
-					"AI-assisted 3D model generation. In-house compiler from LLM-generated design documents to 3D mesh. User-facing agent design system and web interface.",
-					"Low-level printer firmware. Buffer management and synchronization of G-code and Xaar printhead UART communication.",
+					"Technical lead§ for development in the HCI research group. Coordinating and delegating to other developers across several concurrent projects. Co-author on 3 papers in progress.",
+					"AI-assisted§ 3D model generation. In-house compiler from LLM-generated design documents to 3D mesh. User-facing agent design system and web interface.",
+					"Low-level printer firmware.§ Buffer management and synchronization of G-code and Xaar printhead UART communication.",
 				],
 			},
 			{
 				title: "Software Developer (Consultant)",
 				date: "Apr 2024– Jun 2024",
-				subtitle: "Ny Skivehus Activity Center",
+				subtitle: "Ny Skivehus Activity Center§",
 				bullets: [
-					"Digital food ordering for a canteen with elderly users. Highly accessible design for iPad kiosks.",
-					"Automated statistics extraction via MongoDB aggregation pipelines (order statistics, behavioral analysis).",
-					"Card payment via SumUp terminals + live kitchen view (Socket.IO). Runs in production, still hosted and maintained by me.",
+					"Digital food ordering§ for a canteen with elderly users. Highly accessible design for iPad kiosks.",
+					"Automated statistics extraction§ via MongoDB aggregation pipelines (order statistics, behavioral analysis).",
+					"Card payment§ via SumUp terminals + live kitchen view (Socket.IO). Runs in production, still hosted and maintained by me.",
 				],
 			},
 		],
 	},
 	references: {
 		title: "References",
-		items: ["Michael Wessely, PI, Interactive Matter Lab, Aarhus University"],
+		items: ["Michael Wessely§, PI, Interactive Matter Lab, Aarhus University"],
 	},
 };
 

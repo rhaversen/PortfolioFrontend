@@ -25,6 +25,15 @@ const CONTACT_ICONS = {
 	flask: FlaskIcon,
 } as const;
 
+const BOLD_END = "§";
+
+function renderText(text: string | undefined): ReactElement {
+	if (!text) return <></>;
+	const i = text.indexOf(BOLD_END);
+	if (i === -1) return <>{text}</>;
+	return <><strong>{text.slice(0, i)}</strong>{text.slice(i + BOLD_END.length)}</>;
+}
+
 export default function CvTemplate({ data, variant = "final", section = "full" }: { data: CvData; variant?: "final" | "raw"; section?: "full" | "left" | "right" }): ReactElement {
 	const raw = variant === "raw";
 	const articleClass = `text-[8.6pt] leading-[1.42] text-neutral-900 ${raw ? RAW_OVERRIDE : ""}`;
@@ -39,8 +48,8 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 							<div key={text} className="flex items-center gap-[2.2mm] text-[9pt]">
 								<Icon />
 								{href
-									? <a href={href} className="underline decoration-neutral-400">{text}</a>
-									: <span>{text}</span>}
+									? <a href={href} className="underline decoration-neutral-400">{renderText(text)}</a>
+									: <span>{renderText(text)}</span>}
 							</div>
 						);
 					})}
@@ -50,8 +59,8 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 					<h2 className={`${H2_CLASS} mt-[2mm]`}>{data.skills.title}</h2>
 					{data.skills.groups.map(({ heading, text }) => (
 						<div key={heading}>
-							<h3 className={`${H3_CLASS} first-of-type:mt-0`}>{heading}</h3>
-							<p className={P_CLASS}>{text}</p>
+							<h3 className={`${H3_CLASS} first-of-type:mt-0`}>{renderText(heading)}</h3>
+							<p className={P_CLASS}>{renderText(text)}</p>
 						</div>
 					))}
 				</section>
@@ -69,7 +78,7 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 
 				<div className="mb-[6mm] flex flex-col gap-[3mm]">
 					{data.intro.map((paragraph, i) => (
-						<p key={i}>{paragraph}</p>
+						<p key={i}>{renderText(paragraph)}</p>
 					))}
 				</div>
 
@@ -78,12 +87,12 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 					{data.education.entries.map(({ title, date, bullets }) => (
 						<div key={title} className={ENTRY_CLASS}>
 							<div className={HEAD_CLASS}>
-								<h3 className={TITLE_CLASS}>{title}</h3>
+								<h3 className={TITLE_CLASS}>{renderText(title)}</h3>
 								<span className={DATE_CLASS}>{date}</span>
 							</div>
 							<ul className={`${LIST_CLASS} mt-[2mm]`}>
 								{bullets.map((bullet) => (
-									<li key={bullet} className={LI_CLASS}>{bullet}</li>
+									<li key={bullet} className={LI_CLASS}>{renderText(bullet)}</li>
 								))}
 							</ul>
 						</div>
@@ -95,13 +104,13 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 					{data.experience.entries.map(({ title, date, subtitle, bullets }) => (
 						<div key={title} className={ENTRY_CLASS}>
 							<div className={HEAD_CLASS}>
-								<h3 className={TITLE_CLASS}>{title}</h3>
+								<h3 className={TITLE_CLASS}>{renderText(title)}</h3>
 								<span className={DATE_CLASS}>{date}</span>
 							</div>
-							<p className={SUB_CLASS}>{subtitle}</p>
+							<p className={SUB_CLASS}>{renderText(subtitle)}</p>
 							<ul className={LIST_CLASS}>
 								{bullets.map((bullet) => (
-									<li key={bullet} className={LI_CLASS}>{bullet}</li>
+									<li key={bullet} className={LI_CLASS}>{renderText(bullet)}</li>
 								))}
 							</ul>
 						</div>
@@ -112,7 +121,7 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 					<h2 className={H2_CLASS}>{data.references.title}</h2>
 					<ul className={LIST_CLASS}>
 						{data.references.items.map((item) => (
-							<li key={item} className={LI_CLASS}>{item}</li>
+							<li key={item} className={LI_CLASS}>{renderText(item)}</li>
 						))}
 					</ul>
 				</section>
@@ -142,8 +151,8 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 								<div key={text} className="flex items-center gap-[2.2mm] text-[9pt]">
 									<Icon />
 									{href
-										? <a href={href} className="underline decoration-neutral-400">{text}</a>
-										: <span>{text}</span>}
+										? <a href={href} className="underline decoration-neutral-400">{renderText(text)}</a>
+										: <span>{renderText(text)}</span>}
 								</div>
 							);
 						})}
@@ -153,8 +162,8 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 						<h2 className={`${H2_CLASS} mt-[2mm]`}>{data.skills.title}</h2>
 						{data.skills.groups.map(({ heading, text }) => (
 							<div key={heading}>
-								<h3 className={`${H3_CLASS} first-of-type:mt-0`}>{heading}</h3>
-								<p className={P_CLASS}>{text}</p>
+								<h3 className={`${H3_CLASS} first-of-type:mt-0`}>{renderText(heading)}</h3>
+								<p className={P_CLASS}>{renderText(text)}</p>
 							</div>
 						))}
 					</section>
@@ -169,7 +178,7 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 
 					<div className="mb-[6mm] flex flex-col gap-[3mm]">
 						{data.intro.map((paragraph, i) => (
-							<p key={i}>{paragraph}</p>
+							<p key={i}>{renderText(paragraph)}</p>
 						))}
 					</div>
 
@@ -178,12 +187,12 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 						{data.education.entries.map(({ title, date, bullets }) => (
 							<div key={title} className={ENTRY_CLASS}>
 								<div className={HEAD_CLASS}>
-									<h3 className={TITLE_CLASS}>{title}</h3>
+									<h3 className={TITLE_CLASS}>{renderText(title)}</h3>
 									<span className={DATE_CLASS}>{date}</span>
 								</div>
 								<ul className={`${LIST_CLASS} mt-[2mm]`}>
 									{bullets.map((bullet) => (
-										<li key={bullet} className={LI_CLASS}>{bullet}</li>
+										<li key={bullet} className={LI_CLASS}>{renderText(bullet)}</li>
 									))}
 								</ul>
 							</div>
@@ -195,13 +204,13 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 						{data.experience.entries.map(({ title, date, subtitle, bullets }) => (
 							<div key={title} className={ENTRY_CLASS}>
 								<div className={HEAD_CLASS}>
-									<h3 className={TITLE_CLASS}>{title}</h3>
+									<h3 className={TITLE_CLASS}>{renderText(title)}</h3>
 									<span className={DATE_CLASS}>{date}</span>
 								</div>
-								<p className={SUB_CLASS}>{subtitle}</p>
+								<p className={SUB_CLASS}>{renderText(subtitle)}</p>
 								<ul className={LIST_CLASS}>
 									{bullets.map((bullet) => (
-										<li key={bullet} className={LI_CLASS}>{bullet}</li>
+										<li key={bullet} className={LI_CLASS}>{renderText(bullet)}</li>
 									))}
 								</ul>
 							</div>
@@ -212,7 +221,7 @@ export default function CvTemplate({ data, variant = "final", section = "full" }
 						<h2 className={H2_CLASS}>{data.references.title}</h2>
 						<ul className={LIST_CLASS}>
 							{data.references.items.map((item) => (
-								<li key={item} className={LI_CLASS}>{item}</li>
+								<li key={item} className={LI_CLASS}>{renderText(item)}</li>
 							))}
 						</ul>
 					</section>
