@@ -6,6 +6,8 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
+		"test": "jest",
+		"test:watch": "jest --watch",
 		"lint": "eslint .",
 		"lint:fix": "eslint --fix .",
 		"spellcheck": "npx cspell .",
@@ -24,6 +26,7 @@
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4",
+		"@types/jest": "^30.0.0",
 		"@types/node": "^26",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
@@ -32,8 +35,11 @@
 		"eslint": "^9.39.1",
 		"eslint-config-next": "16.2.9",
 		"glob": "^13.0.6",
+		"jest": "^30.5.2",
+		"jest-environment-jsdom": "^30.5.2",
 		"tailwind-api-utils": "^1.0.3",
 		"tailwindcss": "^4",
+		"ts-jest": "^29.4.12",
 		"typescript": "^6"
 	},
 	"engines": {

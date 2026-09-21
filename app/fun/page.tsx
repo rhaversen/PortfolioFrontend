@@ -51,7 +51,7 @@ export default function FunPage() {
 		<div className="min-h-screen text-foreground antialiased [font-variant-numeric:tabular-nums]">
 			<section className="w-full bg-card/80">
 			<div className="max-w-4xl mx-auto px-6 pt-12 sm:pt-14 pb-4 sm:pb-6">
-					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Side Projects Fun</h1>
+					<h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.01em] leading-tight">Side Projects</h1>
 					<p className="text-foreground/90 mt-5 max-w-3xl text-sm leading-relaxed">
 						Interactive side projects that sit outside the main portfolio work. Pick a project to open it here.
 					</p>
