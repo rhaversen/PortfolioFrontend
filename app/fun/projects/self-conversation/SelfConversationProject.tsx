@@ -67,23 +67,10 @@ export default function SelfConversationProject() {
 
 	useEffect(() => clearTimers, [clearTimers])
 
-	const socketRef = useSocket((socket) => {
-		socket.on('selfconvo:reply', ({ reply }: { reply: string }) => {
-			handlersRef.current.onReply(reply)
-		})
-
-		socket.on('selfconvo:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
-			clearTimers()
-			setState(prev => ({ ...prev, running: false, isWaiting: false, typingVoice: null }))
-			if (retryAfterMs !== undefined && retryAfterMs > 0) {
-				triggerRateLimit(retryAfterMs)
-			} else {
-				setErrorMessage('The conversation stalled. Press Continue to keep it going.')
-			}
-		})
-	}, [clearTimers, triggerRateLimit])
-
-	const handlersRef = useRef<{ onReply: (reply: string) => void }>({ onReply: () => {} })
+	// Connection lifecycle only — event handlers are subscribed in the effect
+	// below, after the reply-handling callbacks exist (they depend on emit,
+	// which depends on the socket, so a cycle is unavoidable otherwise).
+	const socketRef = useSocket(() => {}, [])
 
 	const requestReply = useCallback((history: string[]) => {
 		setState(prev => ({ ...prev, isWaiting: true }))
@@ -129,8 +116,29 @@ export default function SelfConversationProject() {
 	}, [nextTurn, stateRef])
 
 	useEffect(() => {
-		handlersRef.current.onReply = beginReply
-	}, [beginReply])
+		const socket = socketRef.current
+		if (!socket) return
+
+		const onReply = ({ reply }: { reply: string }) => {
+			beginReply(reply)
+		}
+		const onError = ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
+			clearTimers()
+			setState(prev => ({ ...prev, running: false, isWaiting: false, typingVoice: null }))
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				triggerRateLimit(retryAfterMs)
+			} else {
+				setErrorMessage('The conversation stalled. Press Continue to keep it going.')
+			}
+		}
+
+		socket.on('selfconvo:reply', onReply)
+		socket.on('selfconvo:error', onError)
+		return () => {
+			socket.off('selfconvo:reply', onReply)
+			socket.off('selfconvo:error', onError)
+		}
+	}, [beginReply, clearTimers, socketRef, triggerRateLimit])
 
 	const start = useCallback(() => {
 		const text = input.trim()
