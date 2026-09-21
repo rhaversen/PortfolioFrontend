@@ -18,7 +18,7 @@ export default function GlobalNav(): ReactElement {
 	const isOnRoute = (route: string): boolean => pathname === route || pathname.startsWith(`${route}/`)
 
 	return (
-		<div className="fixed top-0 inset-x-4 sm:inset-x-6 z-40 flex items-start justify-between gap-2">
+		<div className="fixed top-0 inset-x-4 sm:inset-x-6 z-40 flex items-start justify-between gap-2 print:hidden">
 			<div className="flex items-center gap-2">
 				{!isOnRoute('/') && (
 					<Link href="/" className={navLinkClass}>
@@ -28,6 +28,13 @@ export default function GlobalNav(): ReactElement {
 				)}
 			</div>
 			<div className="flex items-center gap-2">
+				{!isOnRoute('/cv') && (
+					<Link href="/cv" className={navLinkClass}>
+						<span>CV</span>
+						<span aria-hidden="true" className="text-xs">↗</span>
+					</Link>
+				)}
+
 				{!isOnRoute('/fun') && (
 					<Link href="/fun" className={navLinkClass}>
 						<span>Fun</span>
