@@ -45,17 +45,83 @@ export default function CvReveal({ data }: { data: CvData }): ReactElement {
 	);
 }
 
-const JSON_KEY = "text-[9pt] font-mono text-accent/70";
-const JSON_PUNCT = "text-[9pt] font-mono text-neutral-300";
-const JSON_VALUE = "text-[7.5pt] font-mono text-neutral-500 whitespace-pre-wrap";
+// Light theme: brackets cycle dark colors by depth; keys/punctuation black, values near-black blue.
+const DEPTH_COLORS = ["text-yellow-700", "text-purple-700", "text-blue-700"];
+const KEY_CLASS = "text-black";
+const PUNCT_CLASS = "text-black";
+const VALUE_CLASS = "text-blue-950";
 
-function Field({ label, value }: { label: string; value: unknown }): ReactElement {
+function isPrimitive(value: unknown): boolean {
+	return value === null || typeof value !== "object";
+}
+
+function V({ value, depth }: { value: unknown; depth: number }): ReactElement {
+	const bc = DEPTH_COLORS[depth % DEPTH_COLORS.length];
+	const ind = "  ".repeat(depth);
+
+	if (isPrimitive(value)) {
+		return <span className={VALUE_CLASS}>{JSON.stringify(value)}</span>;
+	}
+
+	if (Array.isArray(value)) {
+		return (
+			<>
+				<span className={bc}>[</span>
+				{value.map((item, i) => (
+					<span key={i}>
+						{"\n"}{ind}
+						<V value={item} depth={depth + 1} />
+						{i < value.length - 1 && <span className={PUNCT_CLASS}>,</span>}
+					</span>
+				))}
+				{"\n"}{"  ".repeat(depth - 1)}
+				<span className={bc}>]</span>
+			</>
+		);
+	}
+
+	const entries = Object.entries(value as Record<string, unknown>);
+	if (entries.every(([, v]) => isPrimitive(v))) {
+		return (
+			<>
+				<span className={bc}>{"{ "}</span>
+				{entries.map(([k, v], i) => (
+					<span key={k}>
+						<span className={KEY_CLASS}>{k}: </span>
+						<V value={v} depth={depth + 1} />
+						{i < entries.length - 1 && <span className={PUNCT_CLASS}>, </span>}
+					</span>
+				))}
+				<span className={bc}>{" }"}</span>
+			</>
+		);
+	}
+
 	return (
-		<div>
-			<span className={JSON_KEY}>&quot;{label}&quot;</span>
-			<span className={JSON_PUNCT}>: </span>
-			<pre className={`${JSON_VALUE} m-0`}>{JSON.stringify(value, null, 2)}</pre>
-		</div>
+		<>
+			<span className={bc}>{"{"}</span>
+			{entries.map(([k, v], i) => (
+				<span key={k}>
+					{"\n"}{ind}
+					<span className={KEY_CLASS}>{k}: </span>
+					<V value={v} depth={depth + 1} />
+					{i < entries.length - 1 && <span className={PUNCT_CLASS}>,</span>}
+				</span>
+			))}
+			{"\n"}{"  ".repeat(depth - 1)}
+			<span className={bc}>{"}"}</span>
+		</>
+	);
+}
+
+function Field({ label, value, last = false }: { label: string; value: unknown; last?: boolean }): ReactElement {
+	return (
+		<pre className="text-[7.5pt] font-mono whitespace-pre-wrap m-0">
+			<span className={KEY_CLASS}>&quot;{label}&quot;</span>
+			<span className={PUNCT_CLASS}>: </span>
+			<V value={value} depth={1} />
+			{!last && <span className={PUNCT_CLASS}>,</span>}
+		</pre>
 	);
 }
 
@@ -84,7 +150,7 @@ function CvJsonView({ data }: { data: CvData }): ReactElement {
 					<Field label="experience" value={data.experience} />
 				</section>
 				<section>
-					<Field label="references" value={data.references} />
+					<Field label="references" value={data.references} last />
 				</section>
 			</div>
 		</article>
