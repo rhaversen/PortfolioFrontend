@@ -15,8 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+	metadataBase: new URL("https://rhaversen.com"),
 	title: "Rasmus Haversen — Portfolio",
 	description: "Full-stack systems, self-hosted on a Raspberry Pi.",
+	openGraph: {
+		type: "website",
+		url: "/",
+		siteName: "Rasmus Haversen — Portfolio",
+		title: "Rasmus Haversen — Portfolio",
+		description: "Full-stack systems, self-hosted on a Raspberry Pi.",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Rasmus Haversen — Portfolio",
+		description: "Full-stack systems, self-hosted on a Raspberry Pi.",
+	},
 	icons: {
 		icon: [
 			{ url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
