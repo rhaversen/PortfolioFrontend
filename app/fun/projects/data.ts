@@ -6,7 +6,9 @@ import ExamPingPongProject from "./exam-ping-pong/ExamPingPongProject";
 import LlmBrainwashingProject from "./llm-brainwashing/LlmBrainwashingProject";
 import AnimatedCommitsProject from "./animated-commits/AnimatedCommitsProject";
 import OneWordStoryProject from "./one-word-story/OneWordStoryProject";
+import SelfConversationProject from "./self-conversation/SelfConversationProject";
 import SkumfidusProject from "./skumfidus/SkumfidusProject";
+import EclipseForecastProject from "./eclipse-forecast/EclipseForecastProject";
 import type { SideProject } from "./types";
 
 export const SIDE_PROJECTS: SideProject[] = [
@@ -55,12 +57,6 @@ export const SIDE_PROJECTS: SideProject[] = [
 		summary: "Some times are rarer than others. Catch me at the rarest one.",
 		Component: SkumfidusProject,
 	},
-/**	{
-		id: "agent-give-up",
-		title: "Agent Give Up",
-		summary: "Give an AI agent a task it cannot solve. It's been told not to give up. Watch what happens.",
-		Component: AgentGiveUpProject,
-	},  */
 	{
 		id: "terminator",
 		title: "Terminator",
@@ -74,5 +70,18 @@ export const SIDE_PROJECTS: SideProject[] = [
 		summary: "You and an AI write a story together, one word at a time. It only ever sees what's been written so far — and only ever gets to add one word back.",
 		Component: OneWordStoryProject,
 		category: "llm",
+	},
+	{
+		id: "self-conversation",
+		title: "Talking With Yourself",
+		summary: "Seed a conversation and watch an AI argue with itself — the two boxes trade places after every message, forever.",
+		Component: SelfConversationProject,
+		category: "llm",
+	},
+	{
+		id: "eclipse-forecast",
+		title: "Eclipse Forecast",
+		summary: "A 3D globe showing exactly where the Moon's shadow will fall for every solar eclipse over the next decade — 1:1 with NASA's published paths, drawn straight from their Besselian elements.",
+		Component: EclipseForecastProject,
 	},
 ];
