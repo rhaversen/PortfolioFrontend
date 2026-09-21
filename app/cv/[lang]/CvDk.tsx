@@ -49,8 +49,8 @@ const data: CvData = {
 				subtitle: "Interactive Matter Lab, Aarhus Universitet§",
 				bullets: [
 					"Teknisk lead§ for udviklingsarbejdet i HCI-forskningsgruppen: jeg koordinerer og delegerer til andre udviklere på tværs af flere samtidige projekter under stramme deadlines.",
-					"AI-assisteret§ generering af 3D-modeller: en platform, hvor brugere beskriver et design i almindelig tekst og får en printbar 3D-model ud. Medforfatter på tre videnskabelige artikler under udarbejdelse.",
-					"Software til en eksperimentel sølv-printer: bufferhåndtering og synkronisering med printerens hardware via G-code og UART-kommunikation.",
+					"AI-assisteret generering af 3D-modeller:§ en platform, hvor brugere beskriver et design i almindelig tekst og får en printbar 3D-model ud. Medforfatter på tre videnskabelige artikler under udarbejdelse.",
+					"Software til en eksperimentel sølv-printer:§ bufferhåndtering og synkronisering med printerens hardware via G-code og UART-kommunikation.",
 				],
 			},
 			{
