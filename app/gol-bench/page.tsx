@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import GameOfLifeBg from "../components/GameOfLifeBg";
+import CardBlob from "../components/CardBlob";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -464,74 +465,78 @@ export default function GolBenchPage() {
             <GameOfLifeBg />
 
             <div className="relative z-10 max-w-3xl mx-auto px-6 pt-16 pb-12 space-y-8">
-                {/* Header */}
-                <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-muted">Performance Lab</p>
-                    <h1 className="text-3xl font-semibold tracking-tight mt-2">GOL Background Benchmark</h1>
-                    <p className="text-sm text-foreground/60 mt-2 leading-relaxed">
-                        Measures the rendering cost of <code className="text-foreground/80">GameOfLifeBg</code> without
-                        modifying the component. A separate RAF probe captures inter-frame deltas, long tasks, and
-                        heap pressure alongside the component&apos;s own loop.
-                    </p>
-                </div>
+                <CardBlob />
 
-                {/* Tabs */}
-                <div className="flex border border-border/30">
-                    {(["bench", "compare"] as ActiveTab[]).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors cursor-pointer ${activeTab === tab
+                <div className="relative z-10">
+                    {/* Header */}
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.24em] text-muted">Performance Lab</p>
+                        <h1 className="text-3xl font-semibold tracking-tight mt-2">GOL Background Benchmark</h1>
+                        <p className="text-sm text-foreground/60 mt-2 leading-relaxed">
+                            Measures the rendering cost of <code className="text-foreground/80">GameOfLifeBg </code> without
+                            modifying the component. A separate RAF probe captures inter-frame deltas, long tasks, and
+                            heap pressure alongside the component&apos;s own loop.
+                        </p>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex border border-border/30">
+                        {(["bench", "compare"] as ActiveTab[]).map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors cursor-pointer ${activeTab === tab
                                     ? "bg-foreground/10 text-foreground"
                                     : "text-foreground/40 hover:text-foreground/60"
-                                }`}
-                        >
-                            {tab === "bench" ? "Benchmark" : "Compare"}
-                        </button>
-                    ))}
-                </div>
-
-                {/* ── Static benchmark tab ── */}
-                {activeTab === "bench" && (
-                    <div className="space-y-6">
-                        {status === "idle" && (
-                            <ConfigPanel
-                                warmupMs={warmupMs}
-                                durationMs={durationMs}
-                                onWarmupChange={setWarmupMs}
-                                onDurationChange={setDurationMs}
-                                onStart={startBenchmark}
-                            />
-                        )}
-                        {status === "warmup" && <WarmupCard countdown={countdown} />}
-                        {status === "running" && (
-                            <RunningCard
-                                progress={progress}
-                                frameCount={liveFrameCount}
-                                longTaskCount={liveLongTaskCount}
-                            />
-                        )}
-                        {status === "done" && report && (
-                            <Report
-                                report={report}
-                                onReset={resetBenchmark}
-                                onDownload={() => downloadReport(report)}
-                                onSaveToCompare={() => saveToComparison(report)}
-                            />
-                        )}
+                                    }`}
+                            >
+                                {tab === "bench" ? "Benchmark" : "Compare"}
+                            </button>
+                        ))}
                     </div>
-                )}
 
-                {/* ── Compare tab ── */}
-                {activeTab === "compare" && (
-                    <ComparePanel
-                        runs={savedRuns}
-                        onUpload={handleFileUpload}
-                        onRemove={(i) => setSavedRuns((prev) => prev.filter((_, idx) => idx !== i))}
-                        onClear={() => setSavedRuns([])}
-                        error={compareError}
-                    />
-                )}
+                    {/* ── Static benchmark tab ── */}
+                    {activeTab === "bench" && (
+                        <div className="space-y-6">
+                            {status === "idle" && (
+                                <ConfigPanel
+                                    warmupMs={warmupMs}
+                                    durationMs={durationMs}
+                                    onWarmupChange={setWarmupMs}
+                                    onDurationChange={setDurationMs}
+                                    onStart={startBenchmark}
+                                />
+                            )}
+                            {status === "warmup" && <WarmupCard countdown={countdown} />}
+                            {status === "running" && (
+                                <RunningCard
+                                    progress={progress}
+                                    frameCount={liveFrameCount}
+                                    longTaskCount={liveLongTaskCount}
+                                />
+                            )}
+                            {status === "done" && report && (
+                                <Report
+                                    report={report}
+                                    onReset={resetBenchmark}
+                                    onDownload={() => downloadReport(report)}
+                                    onSaveToCompare={() => saveToComparison(report)}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Compare tab ── */}
+                    {activeTab === "compare" && (
+                        <ComparePanel
+                            runs={savedRuns}
+                            onUpload={handleFileUpload}
+                            onRemove={(i) => setSavedRuns((prev) => prev.filter((_, idx) => idx !== i))}
+                            onClear={() => setSavedRuns([])}
+                            error={compareError}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );
