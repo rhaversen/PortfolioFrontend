@@ -1,7 +1,7 @@
 Timelønnet medarbejder (gerne studerende) til programmeringsopgaver
 Om Aarhus Universitet
 
-Aarhus Universitet er et fagligt bredt og forskningsintensivt universitet med høj kvalitet i uddannelse og forskning, og et stærkt engagement i samfundsudviklingen nationalt og globalt. Universitetet tilbyder et inspirerende uddannelses- og forskningsmiljø for 37.500 studerende og 9.000 medarbejdere med en årlig omsætning på 8,9 mia. kr. Læs mere på www.au.dk
+Aarhus Universitet er et fagligt bredt og forskningsintensivt universitet med høj kvalitet i uddannelse og forskning, og et stærkt engagement i samfundsudviklingen nationalt og globalt. Universitetet tilbyder et inspirerende uddannelses- og forskningsmiljø for 37.500 studerende og 9.000 medarbejdere med en årlig omsætning på 8,9 mia. kr. Læs mere på <www.au.dk>
 
 AU IT drifter systemet ERDA/SiF, der bruges til opbevaring af forskningsdata. Systemet er udviklet på Københavns Universitet, og vi samarbejder med dem om kodeforbedringer, hvor vi regner med, at du skal spille en stor rolle.
 
@@ -43,7 +43,7 @@ Arbejdsstedet er Aarhus Universitet, AU IT, Administrative Applikationer, Univer
 Yderligere oplysninger
 Se mere om AU IT her.
 
-Kontakt evt. Teamleder Klaus Dam, kdam@au.dk, mobil 61966728 (læg evt. besked)
+Kontakt evt. Teamleder Klaus Dam, <kdam@au.dk>, mobil 61966728 (læg evt. besked)
 
 Aarhus Universitet vil være en attraktiv og inspirerende arbejdsplads for alle og ønsker en kultur, hvor hver enkelt kan udfolde og udvikle sig. Vi ser ligestilling og diversitet som en ressource og opfordrer derfor alle interesserede til at ansøge.
 

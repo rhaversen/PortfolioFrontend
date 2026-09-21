@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import CardBlob from "./CardBlob";
 import { GithubIcon } from "./icons";
 
@@ -15,10 +16,11 @@ interface ShowcaseProps {
   github?: string;
   stack: string[];
   hasDetail?: boolean;
+  image?: string;
 }
 
 export default function ProjectShowcase({
-  id, title, titleNote, description, url, github, stack, hasDetail,
+  id, title, titleNote, description, url, github, stack, hasDetail, image,
 }: ShowcaseProps) {
   return (
     <article
@@ -26,6 +28,18 @@ export default function ProjectShowcase({
     >
       <CardBlob />
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0 border border-black" />
+      {image && (
+        <div className="relative z-10 border-b border-black">
+          <Image
+            src={image}
+            alt={`Screenshot of ${title}`}
+            width={800}
+            height={500}
+            sizes="(max-width: 640px) 100vw, (max-width: 896px) 50vw, 448px"
+            className="w-full h-auto"
+          />
+        </div>
+      )}
       {hasDetail && <Link href={`/${id}`} aria-label={`Open ${title} project page`} className="absolute inset-0 z-0" />}
       <div className="relative z-10 flex flex-col flex-1 pointer-events-none">
         <div className="flex items-center justify-between gap-2 mb-3">
