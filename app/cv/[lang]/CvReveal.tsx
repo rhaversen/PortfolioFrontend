@@ -5,15 +5,17 @@ import { type ReactElement } from "react";
 import type { CvData } from "./CvData";
 import CvTemplate from "./CvTemplate";
 
-const WIPE_MS = 900;
+const WIPE_MS = 1500;
+const WIPE_DELAY_MS = 400;
 
 export default function CvReveal({ data }: { data: CvData }): ReactElement {
 	const [revealed, setRevealed] = useState(false);
 	const [wipeDone, setWipeDone] = useState(false);
 
 	useEffect(() => {
-		// One frame delay so the initial clip state paints before the transition.
-		const raf = requestAnimationFrame(() => setRevealed(true));
+		// Brief pause before the sweep starts; one frame delay so the initial
+		// clip state paints before the transition.
+		const raf = requestAnimationFrame(() => setTimeout(() => setRevealed(true), WIPE_DELAY_MS));
 		return () => cancelAnimationFrame(raf);
 	}, []);
 

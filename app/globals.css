@@ -64,9 +64,10 @@ body {
 /* Wipe: the JSON layer is clipped away top → down, while the rendered CV
    sits fully opaque underneath it — so the wipe progressively reveals the
    CV. The clip-path value is set inline in CvReveal and changed on reveal;
-   the transition handles the sweep. */
+   the transition handles the sweep. Delay gives a brief pause before the
+   sweep starts; cubic-bezier ramps it up. */
 .cv-layer-wipe {
-	transition: clip-path 0.9s linear;
+	transition: clip-path 0.9s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 @keyframes streaming-cursor {
