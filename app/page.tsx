@@ -31,10 +31,16 @@ export default function Home() {
 						Outside the lab I run several production systems with real users, deployed on my own
 						infrastructure: a self-managed Kubernetes cluster with GitOps, CI/CD, monitoring, and alerting.
 						I work mostly with TypeScript, Python, Express, Next.js, and MongoDB, with C++ and Java when
-						the problem calls for it — and I&apos;m fluent in Blender, Premiere Pro, and DaVinci Resolve
+						the problem calls for it, and I&apos;m fluent in Blender, Premiere Pro, and DaVinci Resolve
 						when it&apos;s about visuals instead.
 					</p>
-					<div className="mt-5">
+					<div className="mt-6 flex flex-wrap items-center gap-3">
+						<Link
+							href="/cv/en"
+							className="inline-flex w-fit items-center gap-2 border border-black px-3 py-1.5 text-xs font-mono uppercase tracking-[0.12em] text-foreground transition-colors duration-150 hover:-translate-y-px hover:bg-foreground/5"
+						>
+							View CV
+						</Link>
 						<a
 							href="https://github.com/rhaversen"
 							target="_blank"
