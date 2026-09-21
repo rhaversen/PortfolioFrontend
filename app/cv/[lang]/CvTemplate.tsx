@@ -83,8 +83,8 @@ export default function CvTemplate({ data, variant = "final" }: { data: CvData; 
 				{/* ============ RIGHT COLUMN ============ */}
 				<div>
 					<header>
-						<h1 className="text-[24pt] font-bold text-center mb-[2.5mm]">{data.name}</h1>
-						<hr className="border-none border-t-[1.2pt] border-neutral-900 mb-[5mm]" />
+						<h1 className="text-[24pt] font-bold text-center leading-none mb-[1.5mm]">{data.name}</h1>
+						<hr className="border-none border-t-[1.2pt] border-neutral-900 mb-[4mm]" />
 					</header>
 
 					<div className="mb-[6mm] flex flex-col gap-[3mm]">
