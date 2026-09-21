@@ -27,7 +27,7 @@ const data: CvData = {
 	},
 	intro: [
 		"I'm Rasmus, 26 years old, and I study Computer Science at Aarhus University. Today I'm the technical lead at the Interactive Matter Lab at AU, where I coordinate the development of several systems the lab depends on every day. On the side, I run several of my own systems in production with real users.",
-		"I love programming and automating anything that can be automated, and that's why I chose computer science. I learn fast and meet new challenges with curiosity. My experience is that any task can be solved with dedication and the right way of breaking it down; divide and conquer.",
+		"I love programming and automating anything that can be automated, and that's why I chose computer science. I learn fast and meet new challenges with curiosity. My experience is that any task can be solved with dedication and the right decomposition; divide and conquer.",
 		"But my curiosity doesn't stop at a working prototype. What drives me is carrying an idea all the way to a system that real people depend on. I'm a full-stack developer focused on the entire chain, and on-call for everything I build.",
 	],
 	education: {

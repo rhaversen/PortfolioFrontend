@@ -19,20 +19,40 @@ export default function Home() {
 						Rasmus Haversen
 					</h1>
 					<div className="mt-5 h-px w-56 bg-border" />
-					<h2 className="text-sm font-mono text-foreground mt-4">
-						<ObfuscatedEmail />
-					</h2>
+					<div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-mono">
+						<span className="inline-flex items-center gap-1.5 text-foreground">
+							<ObfuscatedEmail />
+						</span>
+						<a
+							href="https://github.com/rhaversen"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-1.5 text-foreground hover:text-muted transition-colors"
+						>
+							<GithubIcon />
+							github.com/rhaversen
+						</a>
+					</div>
 					<p className="text-foreground mt-5 text-sm leading-relaxed">
-						Full-time research intern at the Interactive Matter Lab, Aarhus University, where I&apos;m technical
-						lead for a small developer team, building AI-assisted manufacturing pipelines, low-level printer
-						firmware, and a text-to-3D design platform. Co-author on three conference-submitted papers.
+						I study computer science at Aarhus University, and I&apos;m technical lead at the
+						university&apos;s Interactive Matter Lab, where I coordinate a small developer team.
+						Co-author on three papers in progress.
 					</p>
 					<p className="text-foreground mt-3 text-sm leading-relaxed">
-						Outside the lab I run several production systems with real users, deployed on my own
-						infrastructure: a self-managed Kubernetes cluster with GitOps, CI/CD, monitoring, and alerting.
-						I work mostly with TypeScript, Python, Express, Next.js, and MongoDB, with C++ and Java when
-						the problem calls for it, and I&apos;m fluent in Blender, Premiere Pro, and DaVinci Resolve
-						when it&apos;s about visuals instead.
+						Outside the lab I run my own production systems with real users: A canteen ordering app
+						for elderly residents with card payments and a live kitchen view; Gaslight, where JavaScript
+						written by strangers battles in daily tournaments. All of it runs on my own Kubernetes cluster,
+						and I&apos;m on-call for all of it.
+					</p>
+					<p className="text-foreground mt-3 text-sm leading-relaxed">
+						I chose computer science because I love programming and automating anything that can be
+						automated. Any problem can be cracked with dedication and the right decomposition; divide and conquer.,
+						My curiosity doesn&apos;t stop at a working prototype: the fun part is carrying an idea to a system real
+						people depend on.
+					</p>
+					<p className="text-foreground mt-3 text-sm leading-relaxed">
+						Mostly I write TypeScript and Python, with C++ and Java when the problem calls for it, and
+						Blender, Premiere Pro, or DaVinci Resolve when it&apos;s about visuals instead.
 					</p>
 					<div className="mt-6 flex flex-wrap items-center gap-3">
 						<Link
@@ -41,64 +61,19 @@ export default function Home() {
 						>
 							View CV
 						</Link>
-						<a
-							href="https://github.com/rhaversen"
-							target="_blank"
-							rel="noopener noreferrer"
-							aria-label="GitHub"
-							className="inline-flex items-center space-x-2 text-foreground hover:text-muted transition-colors"
-						>
-							<GithubIcon />
-							<div className="text-xs font-mono">
-								github.com/rhaversen ↗
-							</div>
-						</a>
 					</div>
 				</div>
 			</section>
 
 			<main className="max-w-4xl mx-auto px-6 py-10 space-y-10 relative z-10">
 				<section>
-					<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Infrastructure</h2>
-					<article className="relative">
+					<div className="relative inline-block mb-6">
 						<CardBlob />
 						<div aria-hidden className="pointer-events-none absolute inset-0 z-0 border border-black" />
-						<div className="relative z-10 p-5">
-						<p className="text-sm text-foreground mb-6 max-w-xl leading-relaxed">
-							All web projects share a common deployment setup. This isn&apos;t a separate project, it&apos;s just how everything below gets built and run.
-						</p>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">Kubernetes</h4>
-								<p className="text-xs text-foreground leading-relaxed">Every service has staging and production deployments with Kustomize overlays. Production runs 2+ replicas with horizontal pod autoscaling (up to 10). Liveness and readiness probes on all pods.</p>
-							</div>
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">CI/CD</h4>
-								<p className="text-xs text-foreground leading-relaxed">Reusable GitHub Actions workflows run tests, lint, spellcheck, and build Docker images on every PR. On merge, images are built for ARM64 + AMD64 and pushed to DockerHub. ArgoCD syncs the cluster.</p>
-							</div>
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">Docker</h4>
-								<p className="text-xs text-foreground leading-relaxed">All containers run as non-root users on Debian slim. Production dependencies only. Multi-platform builds (ARM64 for the Raspberry Pi, AMD64 for CI).</p>
-							</div>
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">Monitoring</h4>
-								<p className="text-xs text-foreground leading-relaxed">Sentry with performance tracing and profiling on all backends. Structured JSON logging via Winston with separate error/info/combined files, forwarded to BetterStack for centralized aggregation.</p>
-							</div>
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">Security</h4>
-								<p className="text-xs text-foreground leading-relaxed">Helmet, CORS restricted per domain, httpOnly/secure/SameSite session cookies, tiered rate limiting, environment secrets verified at startup, K8s secrets via secretRef.</p>
-							</div>
-							<div>
-								<h4 className="text-xs font-semibold text-foreground mb-1">TLS</h4>
-								<p className="text-xs text-foreground leading-relaxed">All public endpoints served over HTTPS via cert-manager with Let&apos;s Encrypt certificates, auto-renewed on the cluster.</p>
-							</div>
-						</div>
-						</div>
-					</article>
-				</section>
-
-				<section>
-					<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Research — Interactive Matter Lab</h2>
+						<h2 className="relative z-10 text-xs font-mono uppercase tracking-widest text-muted px-3 py-1.5">
+							Research — Interactive Matter Lab
+						</h2>
+					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-0">
 						<ProjectShowcase
 							id="forge"
@@ -110,7 +85,6 @@ export default function Home() {
 						<ProjectShowcase
 							id="manufacturerai"
 							title="ManufacturerAI"
-							titleNote="Tech Lead"
 							description="Metal 3D printing is too specialized for off-the-shelf software. I led a three-developer team building the pipeline from AI-generated design to a physical silver print — and co-authored the resulting conference paper."
 							stack={["Python", "Swagger/OpenAPI", "Team Coordination", "Manufacturing"]}
 						/>
@@ -125,7 +99,13 @@ export default function Home() {
 				</section>
 
 				<section>
-					<h2 className="text-xs font-mono uppercase tracking-widest text-muted mb-6">Projects</h2>
+					<div className="relative inline-block mb-6">
+						<CardBlob />
+						<div aria-hidden className="pointer-events-none absolute inset-0 z-0 border border-black" />
+						<h2 className="relative z-10 text-xs font-mono uppercase tracking-widest text-muted px-3 py-1.5">
+							Projects
+						</h2>
+					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-0">
 						<ProjectShowcase
 							id="exsys"
@@ -203,6 +183,30 @@ export default function Home() {
 							stack={["Java", "java.util.concurrent", "Genetic Algorithm", "Common Random Numbers", "Multi-Objective Fitness"]}
 						/>
 					</div>
+				</section>
+
+				<section>
+					<div className="relative inline-block mb-6">
+						<CardBlob />
+						<div aria-hidden className="pointer-events-none absolute inset-0 z-0 border border-black" />
+						<h2 className="relative z-10 text-xs font-mono uppercase tracking-widest text-muted px-3 py-1.5">
+							How all of this runs
+						</h2>
+					</div>
+					<article className="relative">
+						<CardBlob />
+						<div aria-hidden className="pointer-events-none absolute inset-0 z-0 border border-black" />
+						<div className="relative z-10 p-5">
+							<p className="text-sm text-foreground leading-relaxed max-w-xl">
+								Everything above deploys itself. CI builds the Docker image, patches the deployment
+								manifest, and ArgoCD syncs it to a Kubernetes cluster running on a Raspberry Pi.
+								Every project gets staging and production environments, health probes, TLS, and
+								monitoring with alerting, all from one shared set of reusable CI workflows. There&apos;s
+								no DevOps team to call: I&apos;m on-call, so the setup has to be boring, repeatable, and
+								survive me sleeping.
+							</p>
+						</div>
+					</article>
 				</section>
 
 			</main>
