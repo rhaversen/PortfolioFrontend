@@ -8,38 +8,37 @@ import { RateLimitBanner } from '../shared/components/RateLimitBanner'
 import { PresetTabs } from '../shared/components/PresetTabs'
 
 const MAX_MESSAGES = 60
-const SWAP_MS = 700
 const TYPE_MS = 18
 
-type Voice = 'a' | 'b'
+interface ChatMessage {
+	id: number
+	text: string
+	/** Which side of the chat this bubble sits on; flips every message. */
+	side: 'left' | 'right'
+	typing: boolean
+}
 
 interface ConversationState {
-	history: string[]
-	voiceText: Record<Voice, string>
-	swapCount: number
-	typingVoice: Voice | null
+	messages: ChatMessage[]
 	isWaiting: boolean
 	running: boolean
 }
 
 const IDLE_STATE: ConversationState = {
-	history: [],
-	voiceText: { a: '', b: '' },
-	swapCount: 0,
-	typingVoice: null,
+	messages: [],
 	isWaiting: false,
 	running: false,
 }
 
 /**
- * Two chat boxes take turns continuing a conversation. After each reply the boxes
- * glide to the opposite side (CSS transform transition) and the next reply streams
- * into whichever box just moved into the responder spot — the model effectively
- * talks to itself while the user only seeds the first message.
+ * A messenger-style chat where an AI talks to itself. The user seeds the first
+ * message; every reply is typed into a new bubble on the opposite side from the
+ * previous one — so the "sender" alternates, like two people trading places in
+ * a normal chat. The full history stays in one scrolling conversation.
  *
  * The whole conversation lives in a single state object because the turn loop
- * (socket reply → swap → typewriter → next request) is driven from timers and
- * socket handlers that would otherwise race against split useState updates.
+ * (socket reply → typewriter → next request) is driven from timers and socket
+ * handlers that would otherwise race against split useState updates.
  */
 export default function SelfConversationProject() {
 	const [systemPrompt, setSystemPrompt] = useState(SELF_CONVERSATION_PRESETS[0].systemPrompt)
@@ -50,27 +49,37 @@ export default function SelfConversationProject() {
 	const { rateLimitExpiresAt, retryCountdown, triggerRateLimit, clearRateLimit } = useRateLimit()
 
 	const systemPromptRef = useRef(systemPrompt)
-	const responderRef = useRef<Voice>('b')
-	const swapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 	const stateRef = useRef(state)
+	const scrollRef = useRef<HTMLDivElement | null>(null)
 	const inputRef = useRef<HTMLInputElement | null>(null)
+	const handlersRef = useRef<{ onReply: (reply: string) => void }>({ onReply: () => {} })
 
 	useEffect(() => {
 		stateRef.current = state
 	}, [state])
 
-	const clearTimers = useCallback(() => {
-		if (swapTimerRef.current !== null) { clearTimeout(swapTimerRef.current); swapTimerRef.current = null }
+	const clearTypeTimer = useCallback(() => {
 		if (typeTimerRef.current !== null) { clearInterval(typeTimerRef.current); typeTimerRef.current = null }
 	}, [])
 
-	useEffect(() => clearTimers, [clearTimers])
+	useEffect(() => clearTypeTimer, [clearTypeTimer])
 
-	// Connection lifecycle only — event handlers are subscribed in the effect
-	// below, after the reply-handling callbacks exist (they depend on emit,
-	// which depends on the socket, so a cycle is unavoidable otherwise).
-	const socketRef = useSocket(() => {}, [])
+	const socketRef = useSocket((socket) => {
+		socket.on('selfconvo:reply', ({ reply }: { reply: string }) => {
+			handlersRef.current.onReply(reply)
+		})
+
+		socket.on('selfconvo:error', ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
+			clearTypeTimer()
+			setState(prev => ({ ...prev, isWaiting: false, running: false }))
+			if (retryAfterMs !== undefined && retryAfterMs > 0) {
+				triggerRateLimit(retryAfterMs)
+			} else {
+				setErrorMessage('The conversation stalled. Press Continue to keep it going.')
+			}
+		})
+	}, [clearTypeTimer, triggerRateLimit])
 
 	const requestReply = useCallback((history: string[]) => {
 		setState(prev => ({ ...prev, isWaiting: true }))
@@ -85,87 +94,69 @@ export default function SelfConversationProject() {
 			setState(prev => ({ ...prev, running: false, isWaiting: false }))
 			return
 		}
-		// The responder is whichever voice did not write the previous message.
-		responderRef.current = history.length % 2 === 1 ? 'b' : 'a'
 		requestReply(history)
 	}, [requestReply])
 
 	const beginReply = useCallback((reply: string) => {
-		setState(prev => ({ ...prev, isWaiting: false, swapCount: prev.swapCount + 1 }))
-		// Let the slide animation read before the responder starts typing.
-		swapTimerRef.current = setTimeout(() => {
-			const responder = responderRef.current
-			if (typeTimerRef.current !== null) clearInterval(typeTimerRef.current)
-			setState(prev => ({ ...prev, typingVoice: responder }))
-			let i = 0
-			typeTimerRef.current = setInterval(() => {
-				i++
-				setState(prev => ({ ...prev, voiceText: { ...prev.voiceText, [responder]: reply.slice(0, i) } }))
-				if (i >= reply.length) {
-					if (typeTimerRef.current !== null) clearInterval(typeTimerRef.current)
-					typeTimerRef.current = null
-					const updated = [...stateRef.current.history, reply]
-					const keepGoing = stateRef.current.running
-					setState(prev => ({ ...prev, history: updated, typingVoice: null }))
-					if (keepGoing) {
-						nextTurn(updated)
-					}
+		const id = Date.now()
+		const side = stateRef.current.messages.length % 2 === 0 ? 'right' : 'left'
+		setState(prev => ({
+			...prev,
+			isWaiting: false,
+			messages: [...prev.messages, { id, text: '', side, typing: true }],
+		}))
+		let i = 0
+		clearTypeTimer()
+		typeTimerRef.current = setInterval(() => {
+			i++
+			const done = i >= reply.length
+			setState(prev => ({
+				...prev,
+				messages: prev.messages.map(m => (m.id === id ? { ...m, text: reply.slice(0, i), typing: !done } : m)),
+			}))
+			if (done) {
+				clearTypeTimer()
+				const updated = [...stateRef.current.messages.map(m => (m.id === id ? { ...m, text: reply, typing: false } : m))]
+				const keepGoing = stateRef.current.running
+				setState(prev => ({ ...prev, messages: updated.map(m => (m.id === id ? { ...m, text: reply, typing: false } : m)) }))
+				if (keepGoing) {
+					nextTurn(updated.map(m => m.text))
 				}
-			}, TYPE_MS)
-		}, SWAP_MS)
-	}, [nextTurn, stateRef])
+			}
+		}, TYPE_MS)
+	}, [clearTypeTimer, nextTurn, stateRef])
+
+	const handlersEffectDeps = beginReply
 
 	useEffect(() => {
-		const socket = socketRef.current
-		if (!socket) return
-
-		const onReply = ({ reply }: { reply: string }) => {
-			beginReply(reply)
-		}
-		const onError = ({ retryAfterMs }: { error?: string; retryAfterMs?: number }) => {
-			clearTimers()
-			setState(prev => ({ ...prev, running: false, isWaiting: false, typingVoice: null }))
-			if (retryAfterMs !== undefined && retryAfterMs > 0) {
-				triggerRateLimit(retryAfterMs)
-			} else {
-				setErrorMessage('The conversation stalled. Press Continue to keep it going.')
-			}
-		}
-
-		socket.on('selfconvo:reply', onReply)
-		socket.on('selfconvo:error', onError)
-		return () => {
-			socket.off('selfconvo:reply', onReply)
-			socket.off('selfconvo:error', onError)
-		}
-	}, [beginReply, clearTimers, socketRef, triggerRateLimit])
+		handlersRef.current.onReply = handlersEffectDeps
+	}, [handlersEffectDeps])
 
 	const start = useCallback(() => {
 		const text = input.trim()
 		if (text === '' || rateLimitExpiresAt !== null) return
-		clearTimers()
+		clearTypeTimer()
 		setErrorMessage('')
-		responderRef.current = 'b'
-		setState({ ...IDLE_STATE, history: [text], voiceText: { a: text, b: '' }, running: true })
+		setState({ ...IDLE_STATE, messages: [{ id: Date.now(), text, side: 'right', typing: false }], running: true })
 		nextTurn([text])
-	}, [clearTimers, input, nextTurn, rateLimitExpiresAt])
+	}, [clearTypeTimer, input, nextTurn, rateLimitExpiresAt])
 
 	const continueConversation = useCallback(() => {
-		if (state.history.length === 0 || state.running || state.isWaiting || state.typingVoice !== null || rateLimitExpiresAt !== null) return
-		clearTimers()
+		if (state.messages.length === 0 || state.running || state.isWaiting || rateLimitExpiresAt !== null) return
+		clearTypeTimer()
 		setErrorMessage('')
 		setState(prev => ({ ...prev, running: true }))
-		nextTurn(state.history)
-	}, [clearTimers, nextTurn, rateLimitExpiresAt, state.history, state.isWaiting, state.running, state.typingVoice])
+		nextTurn(state.messages.map(m => m.text))
+	}, [clearTypeTimer, nextTurn, rateLimitExpiresAt, state.isWaiting, state.messages, state.running])
 
 	const handleReset = useCallback(() => {
 		socketRef.current?.emit('selfconvo:cancel')
-		clearTimers()
+		clearTypeTimer()
 		setState(IDLE_STATE)
 		setErrorMessage('')
 		clearRateLimit()
 		setTimeout(() => inputRef.current?.focus(), 0)
-	}, [clearRateLimit, clearTimers, socketRef])
+	}, [clearRateLimit, clearTypeTimer, socketRef])
 
 	function applyPreset(index: number) {
 		const preset = SELF_CONVERSATION_PRESETS[index]
@@ -187,24 +178,30 @@ export default function SelfConversationProject() {
 		}
 	}
 
-	const hasStarted = state.history.length > 0
-	const isRunning = state.running || state.isWaiting || state.typingVoice !== null
-	const conversationOver = hasStarted && state.history.length >= MAX_MESSAGES && !isRunning
+	const hasStarted = state.messages.length > 0
+	const isRunning = state.running || state.isWaiting || state.messages.some(m => m.typing)
+	const conversationOver = hasStarted && state.messages.length >= MAX_MESSAGES && !isRunning
 
-	function renderBox(voice: Voice, label: string) {
-		const onLeft = voice === 'a' ? state.swapCount % 2 === 0 : state.swapCount % 2 === 1
+	// The AI-only turn loop ignores scroll anchoring subtleties; the user is a spectator.
+	useEffect(() => {
+		const el = scrollRef.current
+		if (el && isRunning) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+	}, [state.messages, isRunning])
+
+	function renderBubble(message: ChatMessage) {
+		const isRight = message.side === 'right'
 		return (
-			<div
-				key={voice}
-				className="absolute top-0 bottom-0 w-[calc(50%-0.375rem)] transition-transform duration-700 ease-in-out"
-				style={{ transform: onLeft ? 'translateX(0)' : 'translateX(calc(100% + 0.75rem))' }}
-			>
-				<div className="flex h-full flex-col border border-border/60 bg-background/40">
-					<span className="border-b border-border/40 px-3 py-1.5 text-[0.6rem] font-mono uppercase tracking-widest text-muted/50">{label}</span>
-					<div className="flex-1 overflow-y-auto whitespace-pre-wrap wrap-break-word px-3 py-2 text-xs">
-						{state.voiceText[voice]}
-						{state.typingVoice === voice && <span className="ml-0.5 inline-block h-[0.9em] w-1 animate-pulse align-middle bg-foreground/30" />}
-					</div>
+			<div key={message.id} className={`flex ${isRight ? 'justify-end' : 'justify-start'}`}>
+				<div
+					className={[
+						'max-w-[75%] px-3 py-2 text-xs whitespace-pre-wrap wrap-break-word border transition-all duration-300',
+						isRight
+							? 'rounded-2xl rounded-br-sm border-blue-500/40 bg-blue-500/10'
+							: 'rounded-2xl rounded-bl-sm border-border/60 bg-background/60',
+					].join(' ')}
+				>
+					{message.text}
+					{message.typing && <span className="ml-0.5 inline-block h-[0.9em] w-1 animate-pulse align-middle bg-foreground/30" />}
 				</div>
 			</div>
 		)
@@ -279,9 +276,17 @@ export default function SelfConversationProject() {
 				<div className="border-t border-red-500/30 bg-red-500/5 px-3 py-2 font-mono text-[0.7rem] text-red-400">{errorMessage}</div>
 			)}
 
-			<div className="relative h-72 overflow-hidden">
-				{renderBox('a', 'Voice A')}
-				{renderBox('b', 'Voice B')}
+			<div ref={scrollRef} className="flex h-96 flex-col gap-2 overflow-y-auto px-3 py-3">
+				{state.messages.map(renderBubble)}
+				{state.isWaiting && (
+					<div className="flex justify-start">
+						<div className="flex gap-1 rounded-2xl rounded-bl-sm border border-border/60 bg-background/60 px-3 py-2.5">
+							<span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted/60 [animation-delay:0ms]" />
+							<span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted/60 [animation-delay:150ms]" />
+							<span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted/60 [animation-delay:300ms]" />
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	)
