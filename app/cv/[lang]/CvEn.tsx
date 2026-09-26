@@ -13,7 +13,7 @@ const data: CvData = {
 	skills: {
 		title: "Technical Skills",
 		groups: [
-			{ heading: "Programming languages", text: "TypeScript, Python, Java, C++, Bash" },
+			{ heading: "Programming languages", text: "TypeScript, Java, Python, C++, Bash" },
 			{ heading: "Backend", text: "Node.js, Express, REST APIs, WebSockets, MongoDB, Redis, Microservices, Sandboxed Code Execution" },
 			{ heading: "Frontend", text: "React, Next.js, TailwindCSS, Three.js" },
 			{ heading: "Operations & DevOps", text: "Docker, Kubernetes, ArgoCD, GitHub Actions (CI/CD, GitOps), Sentry, Better Stack, SealedSecrets" },

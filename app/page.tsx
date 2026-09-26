@@ -51,7 +51,7 @@ export default function Home() {
 						people depend on.
 					</p>
 					<p className="text-foreground mt-3 text-sm leading-relaxed">
-						Mostly I write TypeScript and Python, with C++ and Java when the problem calls for it, and
+						Mostly I write TypeScript, with C++, Java, and Python when the problem calls for it, and
 						Blender, Premiere Pro, or DaVinci Resolve when it&apos;s about visuals instead.
 					</p>
 					<div className="mt-6 flex flex-wrap items-center gap-3">
